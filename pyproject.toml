@@ -60,8 +60,127 @@ Issues = "https://github.com/iderex/eichstelle/issues"
 # something that runs rather than by something that imports.
 eichstelle = "eichstelle.cli:main"
 
+[dependency-groups]
+# Development tools, declared separately from the runtime dependencies above so
+# that an operator installing this suite does not install them. Decision record
+# 0002 requires that separation. Lower bounds only here; pinning them exactly is
+# issue #16.
+dev = [
+  "ruff>=0.14",
+  "mypy>=1.14",
+]
+
 [tool.hatch.build.targets.wheel]
 # Stated rather than inferred: the wheel carries exactly this package from
 # exactly this directory. An inferred layout is the thing that quietly stops
 # being what anyone expected once a second top-level directory appears.
 packages = ["src/eichstelle"]
+
+# ---------------------------------------------------------------------------
+# The linter and the formatter (ruff)
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+# The floor from requires-python. A linter targeting a newer version than the
+# project supports will suggest syntax that does not run on the floor.
+target-version = "py311"
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# The rule selection is written down here rather than inherited from whatever
+# ruff's default happens to be in the release a contributor installed. A default
+# that moves between releases is a gate whose meaning moves with it, and nobody
+# reviews a change they did not make.
+#
+# The principle for what is on: a rule is here if it catches a defect class, and
+# it is not here if it enforces a formatting preference. Formatting is the
+# formatter's job below, so that no contributor ever argues with a linter about
+# a comma.
+select = [
+  # pycodestyle errors that are not whitespace. E1, E2 and E3 are formatting and
+  # are deliberately absent; the formatter decides those and does not negotiate.
+  "E4", # bad import placement and shadowing
+  "E7", # comparisons to None and True, bare statements that do nothing
+  "E9", # syntax and IO errors, which cannot be a preference
+  # Pyflakes: undefined names, unused imports, unused locals, f-strings with no
+  # placeholder. The classic "it ran until that branch was taken" defects.
+  "F",
+  # Bugbear: mutable default arguments, loop-variable capture in closures,
+  # except-clause ordering. Every entry is a bug someone has shipped.
+  "B",
+  # Bandit: subprocess without a shell argument stated, hardcoded temporary
+  # paths, assert used where a check is meant. This project invokes third-party
+  # executables by design, so the subprocess rules earn their place.
+  "S",
+  # Builtin shadowing. A local named `id` or `type` reads as the builtin to
+  # everyone except the author.
+  "A",
+  # Comprehension defects: list() around a comprehension, dict() around pairs.
+  "C4",
+  # Unused function arguments, which are usually a signature that drifted away
+  # from its body.
+  "ARG",
+  # Ruff's own rules, including the ones that catch a broken noqa or an
+  # unsorted __all__.
+  "RUF",
+  # Import sorting. This is the one entry that looks like a preference and is
+  # not treated as one: the order is decided by the tool, not by a reviewer, and
+  # `ruff check --fix` writes it. There is nothing here to argue about because
+  # no human chooses the answer.
+  "I",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# S101 is "assert used". A bare assert is pytest's whole idiom, and the rule
+# exists for production code where asserts vanish under python -O. Tests do not
+# run under -O.
+"tests/**" = ["S101"]
+
+[tool.ruff.format]
+# The formatter runs in check mode in the gate and in write mode locally, and it
+# is the same tool reading this same block in both. Nothing here departs from
+# ruff's defaults, and that is the point: a formatter with local opinions is a
+# formatter contributors fight.
+
+# ---------------------------------------------------------------------------
+# The type checker (mypy)
+# ---------------------------------------------------------------------------
+
+[tool.mypy]
+# Strict from the first commit. Strictness is affordable on an empty tree and
+# unaffordable on a full one, and a type checker in advisory mode accumulates
+# errors until it can never be turned on. Decision record 0002 names dynamic
+# typing as the cost of choosing Python and names this gate as the payment.
+strict = true
+python_version = "3.11"
+mypy_path = "src"
+
+# The scope the bare `mypy` command covers. It reads "the package" today and it
+# has to read "the package and the tests" the moment a test exists, because a
+# type checker that stops at the package leaves the half of the tree where the
+# assertions live unchecked.
+#
+# `tests` is not in this list yet, and the reason is mechanical rather than a
+# choice: mypy refuses a path that does not exist and refuses a directory
+# holding no Python file, so listing it today makes the documented command exit
+# 2 on a clean tree. The test runner is issue #14. Adding "tests" to the line
+# below is the whole of what that issue owes this one, and issue #15 stays open
+# until it is done.
+#
+# The linter and the formatter do not have this problem. `[tool.ruff] src` and
+# the per-file-ignores above already name tests, and ruff passes over a
+# directory that is not there, so those two cover the tests the moment they
+# arrive with no further edit.
+files = ["src"]
+
+# An import with no type information is an error rather than silence. This is
+# what forces an untyped third-party dependency to be declared as a per-module
+# relaxation with a comment, instead of quietly turning everything it touches
+# into Any. It is mypy's default and it is written here so that turning it off
+# has to be a visible edit.
+ignore_missing_imports = false
+
+# There are no per-module relaxations. When one is needed it goes here as its
+# own [[tool.mypy.overrides]] block naming the untyped dependency that forces
+# it and why, never as a blanket relaxation of the settings above.
