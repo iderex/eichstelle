@@ -1,0 +1,67 @@
+[build-system]
+# hatchling is a PEP 517 backend that needs no package-discovery configuration
+# for a src layout and has no setup.py path at all, so there is one way to build
+# this project rather than two. It is a build-time requirement only and is not a
+# runtime dependency of the harness core, which decision record 0002 limits to
+# NumPy, SciPy and a JSON Schema validator.
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "eichstelle"
+# Placeholder. What a version number promises, and the scheme that produces one,
+# is issue #65. Nothing may read meaning into this value until that lands.
+version = "0.0.0"
+description = "A conformance test suite for acoustics standards with several implementations"
+readme = "README.md"
+
+# The interpreter floor is 3.11. Decision record 0002 gives the reasons: 3.10
+# leaves CPython security support inside this project's first release horizon,
+# 3.11 is the first version carrying tomllib in the standard library so the
+# harness reads its own configuration with no dependency, and the current NumPy
+# line has already moved its own floor there. It is not the version the author
+# had installed.
+#
+# The ceiling is below 3.15. The scientific wheels this project will depend on
+# lag a new CPython release by months, and an unbounded upper bound turns that
+# lag into a broken install for whoever upgrades first. The ceiling moves
+# deliberately, once those wheels exist and the suite has been run against the
+# new interpreter, and not before.
+requires-python = ">=3.11,<3.15"
+
+# Empty on purpose. Decision record 0002 permits the harness core to depend on
+# NumPy, SciPy and a JSON Schema validator and on nothing else, and none of them
+# is needed yet because nothing here generates a signal or reads a fixture.
+dependencies = []
+
+# There is no license declaration here, and its absence is deliberate rather
+# than an omission. The license of this repository is a maintainer decision and
+# is open as issue #1. Until it is answered this repository is all rights
+# reserved, which is what GitHub already reports, and writing a license field
+# here would take a decision that is not this file's to take.
+
+classifiers = [
+  "Development Status :: 1 - Planning",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Multimedia :: Sound/Audio :: Analysis",
+]
+
+[project.urls]
+Homepage = "https://github.com/iderex/eichstelle"
+Issues = "https://github.com/iderex/eichstelle/issues"
+
+[project.scripts]
+# One console entry point. What it does for an operator is issue #43; here it
+# exists, prints the version and exits zero, so that the packaging is proven by
+# something that runs rather than by something that imports.
+eichstelle = "eichstelle.cli:main"
+
+[tool.hatch.build.targets.wheel]
+# Stated rather than inferred: the wheel carries exactly this package from
+# exactly this directory. An inferred layout is the thing that quietly stops
+# being what anyone expected once a second top-level directory appears.
+packages = ["src/eichstelle"]

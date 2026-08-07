@@ -1,0 +1,39 @@
+# What the toolchain produces. None of it is the project, and a tracked copy of
+# any of it is a copy that goes stale against the tree it was built from.
+
+# Build artefacts and installed-distribution metadata.
+/build/
+/dist/
+*.egg-info/
+.eggs/
+
+# Bytecode.
+__pycache__/
+*.py[cod]
+
+# Tool caches.
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.tox/
+
+# Coverage output.
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Virtual environments. The name .venv is what uv creates by default; the
+# others are here because a contributor will use one of them sooner or later
+# and a stray environment in a diff is noise nobody reads past.
+.venv/
+venv/
+env/
+
+# Generated stimuli. Decision record 0006 has the harness write signals into a
+# working directory it owns, and issue #6 decides that no audio is committed
+# here at all. Issue #19 is the check that refuses one. This entry is a
+# convenience so that a local run does not leave a contributor relying on
+# noticing, and it is not the mechanism.
+/signals/
