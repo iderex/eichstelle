@@ -85,8 +85,16 @@ whose result is therefore unknown.
 It reports everything it finds in one pass. Somebody writing their first fixture
 gets one list rather than five iterations.
 
-Nothing runs it on a pull request. Issue #17 is where it becomes a check name,
-and until then a malformed fixture is caught by whoever runs the command.
+A pull request runs it too, as the `fixtures` check in
+`.github/workflows/verify.yml`, over the tracked files rather than over the
+working tree. The command there is the one above, character for character, so a
+green run here is what a green check there means.
+
+What that check asserts today is nothing, and it prints so rather than reporting
+green in silence. No fixture is tracked yet, so the job takes its empty branch,
+says it validated none, and warns that it made no assertion about correctness.
+The moment one fixture is tracked the validator runs and its exit code is the
+job's. `docs/ci-checks.md` is where the check is described alongside the others.
 
 ## What it refuses, and why each one
 
