@@ -1,0 +1,22 @@
+# Paths that tools/refuse_tracked_audio.py is permitted to let through.
+#
+# It is empty, and the expectation is that it stays empty. Issue #6 decides
+# that no audio file is committed to this repository, because the reference
+# signals an implementation is validated against are part of the purchased
+# standards and committing one here would be redistribution. Nothing about a
+# file being convenient changes that.
+#
+# One entry per line: the path as git records it, then whitespace, then the
+# reason. Both halves are required. A line naming a path with no reason beside
+# it stops the scan rather than granting anything, so an exception nobody had
+# to justify cannot be written here by accident.
+#
+# A reason says why the file has to be carried and under what license it may
+# be, not that a check was in the way. An entry naming a path that is not
+# tracked also stops the scan, because a stale entry makes this list say
+# something it no longer means.
+#
+# Adding a line here is a diff a reviewer sees. That is the whole design: the
+# exception is visible in a change rather than granted by editing the script.
+#
+# Lines beginning with # are comments and blank lines are ignored.
