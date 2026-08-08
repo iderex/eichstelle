@@ -89,7 +89,15 @@ def capability_result() -> dict[str, Any]:
     return {
         "protocol_version": 1,
         "status": "ok",
-        "capabilities": [{"metric": "loudness", "editions": [2017]}],
+        "capabilities": [
+            {
+                "metric": "loudness",
+                "editions": [2017],
+                "field_conditions": ["free"],
+            }
+        ],
+        "sample_rates": [48000],
+        "upstream_version": "1.2.3",
         "diagnostic": "",
     }
 

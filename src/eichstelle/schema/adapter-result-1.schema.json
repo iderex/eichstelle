@@ -42,7 +42,7 @@
       "type": "string"
     },
     "capabilities": {
-      "description": "Present on the answer to a capabilities job and on nothing else. The metrics this adapter claims and, per metric, the standard editions it claims. What the harness does with it is issue #34; what it looks like is here so that an adapter author writes one document shape.",
+      "description": "Present on the answer to a capabilities job and on nothing else. The metrics this adapter claims and, per metric, what it claims about them. The harness reads this once per run and never invokes the adapter for a pair it does not claim, so an implementation that never claimed a metric is not reported in the same column as one that claimed it and got it wrong.",
       "type": "array",
       "items": {
         "type": "object",
@@ -54,15 +54,47 @@
             "pattern": "^[a-z][a-z0-9_]*$"
           },
           "editions": {
+            "description": "The standard editions claimed for this metric. Two implementations computing what they both call roughness under different editions will disagree for a reason that is about editions, so a pair whose edition is not in this list is never invoked.",
             "type": "array",
             "minItems": 1,
             "items": {
               "type": "integer",
               "minimum": 1900
             }
+          },
+          "field_conditions": {
+            "description": "The field conditions claimed for this metric, for the metrics that have one. Absent means none is claimed, and a fixture asking for one is then unsupported rather than attempted: free field and diffuse field give different answers, and an implementation quietly answering in whichever it defaults to would be reported as disagreeing.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
+          },
+          "calibration_conventions": {
+            "description": "The calibration conventions this adapter can be told, for this metric. Absent means none is claimed and a fixture naming one is unsupported. Same reason as the field condition: a convention an adapter assumes rather than accepts moves every value it produces, in one direction, invisibly.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]*$"
+            }
           }
         }
       }
+    },
+    "sample_rates": {
+      "description": "Present on the answer to a capabilities job. The sample rates in hertz this adapter accepts, enumerated rather than described as a range, because a range has to be interpreted and an adapter that resamples to suit itself is what the contract forbids. A fixture at a rate not in this list is unsupported and is never invoked.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      }
+    },
+    "upstream_version": {
+      "description": "Present on the answer to a capabilities job. The version of the implementation this adapter wrapped, as it was LOADED rather than as it was pinned. The empty string is how to say the library exposes no version at all, and it is a statement rather than an omission: a result attributed to a version nobody can identify is not reproducible, and a reader is entitled to know which of the two they are holding.",
+      "type": "string"
     }
   },
   "allOf": [
@@ -124,6 +156,27 @@
             { "required": ["unit"] }
           ]
         }
+      }
+    },
+    {
+      "description": "A declaration says which rates it accepts and which version it loaded. Both are required alongside the metrics, because a declaration missing either cannot be used for the thing a declaration is for: deciding, before anything is invoked, whether a pair is even meaningful, and attributing what comes back to a version somebody can name.",
+      "if": {
+        "required": ["capabilities"]
+      },
+      "then": {
+        "required": ["sample_rates", "upstream_version"]
+      }
+    },
+    {
+      "description": "The three declaration fields travel together. A result carrying rates or a version and no metrics is not a declaration of anything, and reading one as if it were would let an adapter claim everything by claiming nothing.",
+      "if": {
+        "anyOf": [
+          { "required": ["sample_rates"] },
+          { "required": ["upstream_version"] }
+        ]
+      },
+      "then": {
+        "required": ["capabilities"]
       }
     }
   ],

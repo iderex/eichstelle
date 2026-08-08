@@ -72,11 +72,27 @@ FALLBACK_UNIT: Final = "1"
 
 # What this adapter claims when asked. Two metrics and two editions, which is
 # enough for a caller to see a claimed metric, an unclaimed metric, a claimed
-# edition and an unclaimed one without a second fake.
+# edition and an unclaimed one without a second fake. Loudness carries a field
+# condition and sharpness carries none, so both sides of that rule are reachable
+# too.
 CAPABILITIES: Final = [
-    {"metric": "loudness", "editions": [2017]},
+    {
+        "metric": "loudness",
+        "editions": [2017],
+        "field_conditions": ["free"],
+        "calibration_conventions": ["full_scale_sine"],
+    },
     {"metric": "sharpness", "editions": [2009, 2017]},
 ]
+
+# The rates this adapter accepts, enumerated rather than described. A real
+# adapter lists what its library takes; this one lists two so that a fixture at
+# a third rate is a case a test can reach.
+SAMPLE_RATES: Final = [44100, 48000]
+
+# The version of the implementation this adapter wrapped, as loaded. There is no
+# implementation here, so the string says that rather than inventing a number.
+UPSTREAM_VERSION: Final = "fake-adapter-no-upstream"
 
 BEHAVIOURS: Final = (
     "ok",
@@ -88,6 +104,8 @@ BEHAVIOURS: Final = (
     "no_result",
     "hang",
     "write_outside_working_directory",
+    "declaration_missing_version",
+    "declares_everything",
 )
 
 
@@ -129,14 +147,18 @@ def declined(job: dict[str, Any], *, status: str, reason: str) -> dict[str, Any]
     }
 
 
-def capability_declaration() -> dict[str, Any]:
+def capability_declaration(**over: Any) -> dict[str, Any]:
     """The answer to a capabilities job."""
-    return {
+    document: dict[str, Any] = {
         "protocol_version": 1,
         "status": "ok",
         "capabilities": [dict(entry) for entry in CAPABILITIES],
+        "sample_rates": list(SAMPLE_RATES),
+        "upstream_version": UPSTREAM_VERSION,
         "diagnostic": "",
     }
+    document.update(over)
+    return document
 
 
 def write(job: dict[str, Any], document: object) -> None:
@@ -148,8 +170,54 @@ def write(job: dict[str, Any], document: object) -> None:
 
 def run(job: dict[str, Any], behaviour: str) -> int:
     """Behave as asked and return the process exit code."""
-    if job.get("kind") == "capabilities" and behaviour == "ok":
-        write(job, capability_declaration())
+    if job.get("kind") == "capabilities":
+        if behaviour == "declaration_missing_version":
+            # A declaration with no version, which the schema refuses. The
+            # harness has to record one failure for this adapter rather than a
+            # failure for every fixture it would have been asked about.
+            document = capability_declaration()
+            del document["upstream_version"]
+            write(job, document)
+            return 0
+
+        if behaviour == "declares_everything":
+            # The instinct the contract warns against: claim it all and let the
+            # results speak. Every pair then reaches this adapter, and what
+            # comes back under `error` is a finding against a DECLARED
+            # capability, which is the stronger one.
+            write(
+                job,
+                capability_declaration(
+                    capabilities=[
+                        {
+                            "metric": metric,
+                            "editions": [2005, 2009, 2017, 2020, 2025],
+                            "field_conditions": ["free", "diffuse"],
+                            "calibration_conventions": ["full_scale_sine"],
+                        }
+                        for metric in UNITS
+                    ],
+                    sample_rates=[8000, 16000, 22050, 44100, 48000, 96000],
+                ),
+            )
+            return 0
+
+        if behaviour in ("ok", "outside_tolerance", "unsupported"):
+            write(job, capability_declaration())
+            return 0
+
+    if behaviour in ("declaration_missing_version", "declares_everything"):
+        # Outside a capabilities job these two behave like `error`, so a run
+        # that reaches a measurement with one of them set gets a finding rather
+        # than a silent success.
+        write(
+            job,
+            declined(
+                job,
+                status="error",
+                reason="this behaviour is about the capability declaration",
+            ),
+        )
         return 0
 
     if behaviour == "ok":

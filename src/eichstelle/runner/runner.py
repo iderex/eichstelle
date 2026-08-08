@@ -202,6 +202,11 @@ class Invocation:
     here converts a decimal string to a number, because the comparison is the
     place that decides how a value is read.
 
+    `declaration` is the answer to a capabilities job, present only there, and
+    carried through as the document the adapter wrote. This module does not read
+    what it says: a runner's subject is one invocation, and what a declaration
+    means belongs to `eichstelle.capabilities`.
+
     `diagnostic`, `stdout` and `stderr` are arbitrary bytes from a foreign
     program. They are data. Nothing in this module formats them into anything
     that is then interpreted, and nothing downstream may either.
@@ -213,6 +218,7 @@ class Invocation:
     values: tuple[str, ...] = ()
     unit: str | None = None
     edition: int | None = None
+    declaration: Mapping[str, Any] | None = None
     diagnostic: str = ""
     exit_code: int | None = None
     termination: str | None = None
@@ -399,6 +405,17 @@ def _from_result(document: Mapping[str, Any]) -> Invocation:
             outcome=ERRORED,
             cause=ADAPTER_ERROR,
             detail="the adapter reported that it could not compute the metric",
+            diagnostic=diagnostic,
+            exit_code=0,
+        )
+
+    if "capabilities" in document:
+        # A declaration rather than a measurement. It is carried through as the
+        # document it is, because what the fields mean belongs to whoever reads
+        # a declaration and not to a runner whose subject is one invocation.
+        return Invocation(
+            outcome=MEASURED,
+            declaration=dict(document),
             diagnostic=diagnostic,
             exit_code=0,
         )
@@ -602,6 +619,7 @@ def _invoke_in(
         values=mapped.values,
         unit=mapped.unit,
         edition=mapped.edition,
+        declaration=mapped.declaration,
         diagnostic=mapped.diagnostic,
         exit_code=exit_code,
         duration_seconds=duration,
