@@ -1,0 +1,31 @@
+{
+  "id": "example-tone-at-forty-decibels",
+  "revision": 1,
+  "schema_version": 1,
+  "title": "a 1 kHz sinusoid at 40 dB SPL",
+  "signal": {
+    "kind": "sinusoid",
+    "sample_rate": 48000,
+    "channels": 1,
+    "duration_seconds": "2.0",
+    "parameters": {
+      "frequency_hz": "1000.0",
+      "level_db_spl": "40.0",
+      "calibration_reference_db_spl": "94.0",
+      "fade": { "shape": "raised_cosine", "duration_seconds": "0.05" }
+    }
+  },
+  "metric": "loudness",
+  "metric_parameters": { "field_condition": "free" },
+  "expected": "1.0",
+  "unit": "sone",
+  "tolerance": "0.05",
+  "tolerance_kind": "absolute",
+  "standard": {
+    "designation": "ISO 532",
+    "part": "1",
+    "edition_year": 2017,
+    "clause": "4.1"
+  },
+  "provenance": "generated-by-definition"
+}

@@ -129,6 +129,25 @@ that you accept the permanent public record of it, and the license it will
 eventually be distributed under is not yet a thing anyone can name. If that
 matters to you, wait for #1.
 
+## Adding a fixture, or an implementation
+
+Two walkthroughs, each written for somebody who has not seen this project
+before.
+
+[docs/adding-a-fixture.md](docs/adding-a-fixture.md) is how to write a fixture:
+what the fields mean, how to choose a tolerance and how to justify it, what
+evidence each provenance kind needs, and what the rule above about purchased
+standards means when you are holding a number and deciding where it goes.
+
+[docs/adding-an-implementation.md](docs/adding-an-implementation.md) is how to
+connect your own library: the five steps of the adapter contract, how to declare
+your capabilities without producing a wall of errors that reads as your library
+being broken, and why an adapter may contain no correction.
+
+Both end at a worked example that lives in this tree and is run by the suite, so
+neither can drift from what works. Neither is restated here; if this file and one
+of them ever disagree, they are the ones that are right about their own subject.
+
 ## Where the decisions live
 
 [docs/decisions](docs/decisions) holds the decisions that shape the
