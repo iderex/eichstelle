@@ -124,6 +124,35 @@ Its dependency is the first entry of issue #1, which is a maintainer decision
 and is open. It is recorded here so that the absence is visible in the map
 rather than discovered later by somebody wondering why the row is missing.
 
+## Triaging what an analyser finds
+
+Three of the checks in the map above report into the code scanning view rather
+than failing a run, and the rule for what happens to what they report is the
+same for all three.
+
+Every finding is either fixed or dismissed with a written reason. A dismissal
+with no reason is not a triage, it is a finding moved out of sight, and the
+failure this prevents is the drawer of two hundred open alerts that everybody
+has learned to scroll past. Once that drawer exists the view stops being read at
+all, and the next real finding arrives into a place nobody looks.
+
+A reason is a sentence about this repository and this code. "False positive" is
+not one. "The query flags a subprocess call whose argument list is built from
+constants in this file, and the fixture path never reaches it" is. Somebody
+reading the dismissal a year later has to be able to tell whether it still
+holds, and a reason that says nothing cannot be rechecked.
+
+Dismissing a finding is a decision about risk, so it is made where decisions are
+made here: on the issue that owns the check, or on a new issue where the finding
+outlives the one that introduced it. The alert's own dismissal note carries the
+same sentence, so a reader who arrives from the code scanning view is not sent
+looking for it.
+
+Nothing enforces this. No check counts open alerts, refuses a dismissal without
+a note, or fails a run when the drawer fills up, and there is no open issue that
+would add one. Read this section as a rule people follow rather than one the
+tree refuses to break.
+
 ## What this document does not do
 
 It does not enumerate this repository's checks. `docs/ci-checks.md` is the
