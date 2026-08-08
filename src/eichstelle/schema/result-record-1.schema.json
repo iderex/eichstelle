@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/iderex/eichstelle/blob/main/src/eichstelle/schema/result-record-1.schema.json",
+  "title": "eichstelle result record line, format version 1",
+  "description": "One line of a result record. The record is newline-delimited JSON: the first line is a header, every line after it is an entry, and a run that finished cleanly ends with a summary. This schema describes ONE LINE rather than the whole file, because a record is read a line at a time and a reader that had to hold the file to validate any of it would lose the property record 0009 chose this format for. What a whole file has to satisfy - a header first, at most one summary, and it last - is checked by the reader in `eichstelle.record` and is stated there, because no JSON Schema sees more than one document at a time.\n\nUnknown fields are permitted everywhere on purpose. Record 0009 makes that a rule running in both directions: adding a field does not move the format version because a reader written against the older format ignores it and stays correct about everything else, and a reader that refused an unknown field would refuse exactly the record most worth reading, one produced by a newer harness against the same fixtures.",
+  "type": "object",
+  "required": ["kind"],
+  "properties": {
+    "kind": {
+      "description": "Which of the three line shapes this is. It is first in every line so that a reader can dispatch before parsing the rest.",
+      "enum": ["header", "entry", "summary"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "kind": { "const": "header" } },
+        "required": ["kind"]
+      },
+      "then": { "$ref": "#/$defs/header" }
+    },
+    {
+      "if": {
+        "properties": { "kind": { "const": "entry" } },
+        "required": ["kind"]
+      },
+      "then": { "$ref": "#/$defs/entry" }
+    },
+    {
+      "if": {
+        "properties": { "kind": { "const": "summary" } },
+        "required": ["kind"]
+      },
+      "then": { "$ref": "#/$defs/summary" }
+    }
+  ],
+  "$defs": {
+    "decimal": {
+      "description": "A number written as text, for the reason record 0004 gives: a record whose entire content is a comparison against a tolerance may not have its numbers rounded on the way through a parser.",
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?$"
+    },
+    "timestamp": {
+      "description": "RFC 3339, in UTC, with microseconds and a trailing Z. One format and one offset, so two records from two machines are comparable without anybody working out a local time zone.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"
+    },
+    "header": {
+      "description": "The first line. What it can carry is what is known before the first adapter is invoked, which is why the attempted and produced counts are not here: they are in the summary, and a record with no summary was interrupted.",
+      "required": [
+        "kind",
+        "format_version",
+        "started_at",
+        "harness_version",
+        "fixture_set_version",
+        "fixture_set_checksum",
+        "platform",
+        "operating_system",
+        "operating_system_version",
+        "architecture",
+        "interpreter_version",
+        "adapters",
+        "possible",
+        "run_finished",
+        "operator_paths_included"
+      ],
+      "properties": {
+        "format_version": { "const": 1 },
+        "started_at": { "$ref": "#/$defs/timestamp" },
+        "harness_version": { "type": "string", "minLength": 1 },
+        "fixture_set_version": {
+          "description": "Which fixture set this ran against.",
+          "type": "string",
+          "minLength": 1
+        },
+        "fixture_set_checksum": {
+          "description": "The checksum of that set. Issue #25 is where the manifest it comes from lands; until then a caller supplies whatever it has and the field says what was claimed rather than what was verified.",
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": { "type": "string", "minLength": 1 },
+        "operating_system": { "type": "string", "minLength": 1 },
+        "operating_system_version": { "type": "string" },
+        "architecture": { "type": "string" },
+        "interpreter_version": { "type": "string", "minLength": 1 },
+        "adapters": {
+          "description": "Every adapter in the run, with the upstream version it actually loaded rather than the one it declared. Record 0009 is explicit that the loaded one is what a result is attributable to.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["identifier", "upstream_version"],
+            "properties": {
+              "identifier": { "type": "string", "minLength": 1 },
+              "upstream_version": { "type": "string" }
+            }
+          }
+        },
+        "possible": {
+          "description": "How many fixture and adapter pairs this run could produce a verdict for. Known before anything is invoked, which is why it is here and the other two counts are not.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "selection": {
+          "description": "What subset the operator asked for, per axis, so a partial run is self-describing. Issue #43 is where the axes are chosen; absent means no subset was asked for.",
+          "type": "object"
+        },
+        "run_finished": {
+          "description": "Always false. It is written before the run, so it can say nothing else, and that is the marker record 0009 asks for: a record whose last line is not a summary was interrupted, and its header never claimed otherwise.",
+          "const": false
+        },
+        "operator_paths_included": {
+          "description": "Whether the operator asked for filesystem paths to their own material to be written into this record. False by default, per decision record 0011, and present either way so a reader of a record knows which it is holding without having to trust an absence.",
+          "type": "boolean"
+        }
+      }
+    },
+    "entry": {
+      "description": "One fixture and adapter pair. Every field record 0009 names is present on every entry, including the ones a particular verdict makes empty, because a field that disappears is a field a reader stops looking for.",
+      "required": [
+        "kind",
+        "fixture_id",
+        "fixture_revision",
+        "standard",
+        "part",
+        "edition",
+        "adapter",
+        "adapter_upstream_version",
+        "verdict",
+        "reason",
+        "produced",
+        "produced_unit",
+        "expected",
+        "expected_unit",
+        "tolerance",
+        "tolerance_kind",
+        "margin",
+        "duration_seconds",
+        "source"
+      ],
+      "properties": {
+        "fixture_id": { "type": "string", "minLength": 1 },
+        "fixture_revision": { "type": "integer", "minimum": 1 },
+        "standard": { "type": "string", "minLength": 1 },
+        "part": { "type": "string" },
+        "edition": {
+          "description": "The edition the fixture applies under. Null where the pair never reached an adapter.",
+          "type": ["integer", "null"]
+        },
+        "adapter": { "type": "string", "minLength": 1 },
+        "adapter_upstream_version": {
+          "description": "What the adapter loaded, echoed onto the entry so that one line is attributable without reading the header. Null where the pair was never attempted, because nothing was loaded and a version stated there would be a claim about a run that did not happen.",
+          "type": ["string", "null"]
+        },
+        "verdict": {
+          "description": "One of the six in decision record 0007, and never collapsed into another.",
+          "enum": [
+            "agrees",
+            "disagrees",
+            "unsupported",
+            "errored",
+            "timed_out",
+            "not_run"
+          ]
+        },
+        "reason": {
+          "description": "Which cause it was, for every verdict that has causes, and empty text for the two that do not. Record 0007 folds four adapter outcomes into `errored` and this is where they are told apart again. Present always, so a reader never has to distinguish an absent reason from an empty one.",
+          "type": "string"
+        },
+        "diagnostic": {
+          "description": "What the adapter said, kept as data. Arbitrary bytes from a foreign program, never interpolated into anything interpreted.",
+          "type": "string"
+        },
+        "produced": {
+          "description": "What the implementation answered, as decimal strings. A list because a time-varying metric answers with a series. Empty where nothing was produced.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/decimal" }
+        },
+        "produced_unit": { "type": ["string", "null"] },
+        "expected": {
+          "description": "What the fixture declared. Null for a differential-only fixture and for a pair that has no expectation to compare against.",
+          "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }]
+        },
+        "expected_unit": { "type": ["string", "null"] },
+        "tolerance": {
+          "description": "The band the fixture declared, so a reader recomputing the comparison from this record does not need the fixture file.",
+          "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }]
+        },
+        "tolerance_kind": { "type": ["string", "null"] },
+        "margin": {
+          "description": "How far inside or outside the band the result landed. Positive is inside. Null where no comparison happened.",
+          "anyOf": [{ "$ref": "#/$defs/decimal" }, { "type": "null" }]
+        },
+        "duration_seconds": {
+          "description": "Wall clock for the invocation.",
+          "$ref": "#/$defs/decimal"
+        },
+        "source": {
+          "description": "What was measured, by the identifier the operator assigned. `generated` for a stimulus this suite produced from a fixture description, which is the case that carries no personal data by construction.",
+          "type": "string",
+          "minLength": 1
+        },
+        "source_path": {
+          "description": "The filesystem path of operator-supplied material. Present only when the operator turned it on, which decision record 0011 makes off by default because this is the file most likely to be attached to an issue.",
+          "type": "string"
+        }
+      }
+    },
+    "summary": {
+      "description": "The last line of a run that finished. Its presence is what says the run finished; its absence is what says it did not.",
+      "required": [
+        "kind",
+        "finished_at",
+        "run_finished",
+        "possible",
+        "attempted",
+        "produced"
+      ],
+      "properties": {
+        "finished_at": { "$ref": "#/$defs/timestamp" },
+        "run_finished": { "const": true },
+        "possible": { "type": "integer", "minimum": 0 },
+        "attempted": {
+          "description": "How many pairs an adapter was actually invoked for.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "produced": {
+          "description": "How many produced a verdict from a value. Stated separately from attempted rather than collapsed with it, which record 0007 requires of every summary in this project.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
