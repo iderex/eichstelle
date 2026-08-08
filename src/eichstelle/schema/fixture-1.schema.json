@@ -149,7 +149,11 @@
       "properties": {
         "kind": {
           "description": "Which generator produces this signal. A kind is added by the issue that builds its generator, together with the closed parameter set below. Adding one makes no fixture that is valid today invalid, so it does not raise the schema version.",
-          "enum": ["sinusoid", "amplitude_modulated_sinusoid"]
+          "enum": [
+            "sinusoid",
+            "amplitude_modulated_sinusoid",
+            "frequency_modulated_sinusoid"
+          ]
         },
         "sample_rate": {
           "description": "In hertz. A count, so it stays a JSON number: it is an exact integer and nothing is lost.",
@@ -206,6 +210,23 @@
             "properties": {
               "parameters": {
                 "$ref": "#/$defs/amplitude_modulated_sinusoid_parameters"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "frequency_modulated_sinusoid"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "parameters": {
+                "$ref": "#/$defs/frequency_modulated_sinusoid_parameters"
               }
             }
           }
@@ -269,6 +290,61 @@
           "enum": ["carrier", "modulated"]
         },
         "calibration_reference_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "carrier_phase_radians": {
+          "description": "Optional. The initial phase of the carrier, in radians. Absent means zero, which is what docs/calibration.md states, so a description that says nothing about phase has still named one. Phase matters for a short signal and for anything that measures a time series, which is why it is a field rather than a property of whichever generator happened to run.",
+          "$ref": "#/$defs/decimal"
+        },
+        "modulator_phase_radians": {
+          "description": "Optional. The initial phase of the modulator, in radians. Absent means zero. It decides where in the envelope the signal starts, which a short stimulus and a time-series comparison both see.",
+          "$ref": "#/$defs/decimal"
+        },
+        "fade": {
+          "$ref": "#/$defs/fade"
+        }
+      }
+    },
+    "frequency_modulated_sinusoid_parameters": {
+      "description": "A frequency-modulated sinusoid. Its envelope is constant, so the two readings of `level_db_spl` coincide on it, and `level_convention` is required anyway: a reader who has to know that fact in order to interpret a fixture is a reader who can get it wrong, and a field present on one kind and absent on another is a schema that has to be explained rather than read.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "carrier_frequency_hz",
+        "modulation_frequency_hz",
+        "frequency_deviation_hz",
+        "level_db_spl",
+        "level_convention",
+        "calibration_reference_db_spl",
+        "fade"
+      ],
+      "properties": {
+        "carrier_frequency_hz": {
+          "$ref": "#/$defs/decimal"
+        },
+        "modulation_frequency_hz": {
+          "$ref": "#/$defs/decimal"
+        },
+        "frequency_deviation_hz": {
+          "description": "The peak deviation of the instantaneous frequency from the carrier, in hertz. The instantaneous frequency runs from the carrier minus this value to the carrier plus it. Its size against the carrier and against the sample rate is checked by the generator and not here.",
+          "$ref": "#/$defs/decimal"
+        },
+        "level_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "level_convention": {
+          "description": "Which reading `level_db_spl` means, spelled as it is on an amplitude-modulated description. On this kind the two readings coincide, because a frequency-modulated sinusoid has a constant envelope. The field is required so that nobody has to know that in order to read the fixture.",
+          "enum": ["carrier", "modulated"]
+        },
+        "calibration_reference_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "carrier_phase_radians": {
+          "description": "Optional. The initial phase of the carrier, in radians. Absent means zero, which is what docs/calibration.md states, so a description that says nothing about phase has still named one. Phase matters for a short signal and for anything that measures a time series, which is why it is a field rather than a property of whichever generator happened to run.",
+          "$ref": "#/$defs/decimal"
+        },
+        "modulator_phase_radians": {
+          "description": "Optional. The initial phase of the modulator, in radians. Absent means zero. It decides where in the envelope the signal starts, which a short stimulus and a time-series comparison both see.",
           "$ref": "#/$defs/decimal"
         },
         "fade": {

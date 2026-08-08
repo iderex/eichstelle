@@ -18,21 +18,31 @@ fixture at once.
 """
 
 from eichstelle.signals.generator import (
+    DEFAULT_PHASE,
     FADE_SHAPES,
+    LEVEL_CONVENTIONS,
     DescriptionError,
+    Modulated,
     Sinusoid,
     encode_pcm,
+    parse_modulated,
     parse_sinusoid,
     render,
+    render_modulated,
     write_wave,
 )
 
 __all__ = [
+    "DEFAULT_PHASE",
     "FADE_SHAPES",
+    "LEVEL_CONVENTIONS",
     "DescriptionError",
+    "Modulated",
     "Sinusoid",
     "encode_pcm",
+    "parse_modulated",
     "parse_sinusoid",
     "render",
+    "render_modulated",
     "write_wave",
 ]
