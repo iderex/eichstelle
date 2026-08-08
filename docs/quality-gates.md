@@ -99,14 +99,15 @@ None of the three refuses a tracked audio file. That is a fifth command:
 
 It reads the tracked tree, refuses a path by extension and independently by
 leading bytes, and exits 2 rather than 0 on anything that stops it completing.
-Issue #6 is the decision it enforces and issue #19 is where it was built. Unlike
-the three above, nothing runs it on a pull request. The `verify` workflow does
-not carry it, and #19 is where it becomes a check name:
+Issue #6 is the decision it enforces and issue #19 is where it was built and
+where it became a check name. Like the three above, a pull request runs it:
 
-    $ grep -c refuse_tracked_audio .github/workflows/verify.yml
-    0
+    $ grep -n refuse_tracked_audio .github/workflows/verify.yml
+    278:        run: .venv/bin/python tools/refuse_tracked_audio.py
 
-So a pull request that adds a WAVE file today is refused by nothing.
+The check is called `no-tracked-audio`. What it does not cover is written in the
+script's own docstring and repeated in `docs/ci-checks.md`: the signature table
+is a floor, and somebody who stores samples as text defeats both halves of it.
 
 None of the three is a security review, and the bandit rules in the linter's
 selection are pattern matches over source text rather than an analysis. A rule

@@ -63,6 +63,24 @@ verified no signal checksums, which is the other half of what its name promises
 and which issue #25 owes. Read this check green today as "there was nothing to
 refuse", not as "the fixture set is sound".
 
+**`no-tracked-audio`** runs `tools/refuse_tracked_audio.py`. A failure is a
+tracked file whose extension names an audio container, or a tracked file whose
+leading bytes match an audio container signature whatever it is called, or a
+scan that could not complete. Issue #6 is the decision it enforces: no audio is
+committed here, because the reference signals belong to the purchased standards
+and committing one would be redistribution.
+
+It judges the index rather than the working tree, so it reports what is being
+pushed. `tools/tracked-audio-allowlist.txt` is the only way past it, it is empty
+and expected to stay empty, and every entry has to carry a reason beside the
+path. A path with no reason stops the scan rather than granting anything.
+
+What it does not cover is a floor rather than a guarantee. The signature table
+holds twenty-one containers and thirty-one extensions, so a container nobody
+listed walks through the second test, and samples stored as text defeat both.
+The check is aimed at the honest mistake and at a large binary arriving under an
+innocent name.
+
 ## From the other workflows
 
 These five ran here before the gate above existed. Each is described where it
@@ -99,10 +117,6 @@ list. It has no `pull_request` trigger, because that path cannot publish its
 results, so it is not a check anybody sees on a pull request.
 
 ## What none of them do
-
-None of them refuses a tracked audio file. `tools/refuse_tracked_audio.py`
-exists and can be run by hand, and issue #19 is where it becomes a check name
-here. Until that lands, a pull request adding a WAVE file is refused by nothing.
 
 None of them is a coverage bar, a mutation score or a fuzzing run.
 `docs/quality-parity.md` is the map of what is still owed and which issue owes
