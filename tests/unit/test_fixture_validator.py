@@ -202,9 +202,11 @@ def test_an_unknown_schema_version_is_refused_rather_than_downgraded() -> None:
 def test_a_schema_version_that_is_not_an_integer_is_refused(declared: Any) -> None:
     """`true` is the case worth naming: bool is a subclass of int in Python.
 
-    Without the explicit exclusion, `schema_version: true` would compare equal to
-    1 and select schema version 1, so a fixture declaring nothing meaningful
-    would be validated and could pass.
+    So `schema_version: true` does select schema version 1, and what refuses it
+    is the schema's `const: 1`, which `true` does not satisfy because the types
+    differ. The other three never select a schema at all. Both routes report at
+    the same location, which is why this test asserts the location and not the
+    wording.
     """
     document = valid_fixture()
     document["schema_version"] = declared

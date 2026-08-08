@@ -107,13 +107,18 @@ def _validators() -> dict[int, jsonschema.Draft202012Validator]:
 def _selected_version(document: object) -> int | None:
     """The declared schema version, or None when there is nothing usable to read.
 
-    `bool` is excluded on purpose: it is a subclass of `int` in Python, so
-    `schema_version: true` would otherwise select schema version 1.
+    `bool` is not excluded here, and an earlier draft of this function excluded
+    it on the grounds that `bool` is a subclass of `int` in Python, so
+    `schema_version: true` selects schema version 1. It does select it, and the
+    schema then refuses the document at the same location because `const: 1` is
+    not satisfied by `true`. Deleting the exclusion left the suite green, which
+    is what says it was not the thing doing the refusing, so it is not carried
+    as though it were.
     """
     if not isinstance(document, Mapping):
         return None
     declared = document.get("schema_version")
-    if isinstance(declared, bool) or not isinstance(declared, int):
+    if not isinstance(declared, int):
         return None
     return declared
 
