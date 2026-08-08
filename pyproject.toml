@@ -68,6 +68,13 @@ eichstelle = "eichstelle.cli:main"
 dev = [
   "ruff>=0.14",
   "mypy>=1.14",
+  # The test runner. Its configuration is in [tool.pytest.ini_options] below
+  # rather than in a pytest.ini or a tox.ini, so there is one file a contributor
+  # opens. The floor is 8.0 because `--strict-config` and the return-not-None
+  # warning that the configuration below promotes to an error are both older
+  # than that, and pinning it exactly is issue #16 along with everything else
+  # here.
+  "pytest>=8.0",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -161,18 +168,17 @@ mypy_path = "src"
 # type checker that stops at the package leaves the half of the tree where the
 # assertions live unchecked.
 #
-# `tests` is not in this list yet, and the reason is mechanical rather than a
+# `tests` is in this list as of issue #14, which is what created a directory for
+# it to read. It was absent before that for a mechanical reason rather than a
 # choice: mypy refuses a path that does not exist and refuses a directory
-# holding no Python file, so listing it today makes the documented command exit
-# 2 on a clean tree. The test runner is issue #14. Adding "tests" to the line
-# below is the whole of what that issue owes this one, and issue #15 stays open
-# until it is done.
+# holding no Python file, so naming it on an empty tree made the documented
+# command exit 2. That is what #14 owed #15, and it is paid here.
 #
-# The linter and the formatter do not have this problem. `[tool.ruff] src` and
-# the per-file-ignores above already name tests, and ruff passes over a
-# directory that is not there, so those two cover the tests the moment they
-# arrive with no further edit.
-files = ["src"]
+# The linter and the formatter never had this problem. `[tool.ruff] src` and the
+# per-file-ignores above already named tests, and ruff passes over a directory
+# that is not there, so those two covered the tests the moment they arrived with
+# no further edit.
+files = ["src", "tests"]
 
 # An import with no type information is an error rather than silence. This is
 # what forces an untyped third-party dependency to be declared as a per-module
@@ -184,3 +190,75 @@ ignore_missing_imports = false
 # There are no per-module relaxations. When one is needed it goes here as its
 # own [[tool.mypy.overrides]] block naming the untyped dependency that forces
 # it and why, never as a blanket relaxation of the settings above.
+
+# ---------------------------------------------------------------------------
+# The test runner (pytest)
+# ---------------------------------------------------------------------------
+
+[tool.pytest.ini_options]
+# The configuration is here and not in a pytest.ini, a tox.ini or a setup.cfg,
+# because pytest reads the first of those it finds and stops. Two of them in one
+# tree is a setting that appears to be on and is not, which is the failure this
+# whole section exists to make impossible.
+
+# The minimum version that understands everything below. Older pytest reading a
+# key it does not know is the silent half of the same failure.
+minversion = "8.0"
+
+# Where the suite lives, so that the documented command needs no path argument
+# and cannot be run against a different tree by accident.
+testpaths = ["tests"]
+
+# What a test file, class and function look like. Written down rather than
+# inherited, because the default that discovers nothing is indistinguishable
+# from a suite that passes.
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Strict mode, in the three places pytest offers one.
+#
+# --strict-markers turns an unregistered marker into an error. Without it a
+# typo in @pytest.mark.integration silently marks nothing, and a selection
+# expression built on that marker silently runs nothing.
+#
+# --strict-config turns an unknown key in this very block into an error, so a
+# setting that does not exist cannot sit here looking like it is in force.
+#
+# -ra prints the reason for every non-passing outcome at the end of the run,
+# including skips. A skip nobody sees is a test nobody runs.
+addopts = ["--strict-markers", "--strict-config", "-ra"]
+
+# Warnings are errors. A DeprecationWarning from a numeric library is how a
+# reference signal changes shape between two runs of the same commit, and this
+# project's fixtures are checksummed over exactly those bytes.
+#
+# This also promotes pytest's own return-not-None warning, which is the closest
+# thing pytest has to catching a test that asserts nothing: a test that computes
+# a value and returns it instead of asserting on it fails here rather than
+# passing. It does not catch a test whose body simply contains no assertion at
+# all; pytest has no mechanism for that and none is claimed here.
+#
+# A warning that has to be allowed is added below as its own `ignore::` line
+# naming the library and the reason, never by removing "error".
+filterwarnings = ["error"]
+
+# An xfail that unexpectedly passes fails the run. Otherwise a fixed bug leaves
+# its xfail in place forever and the suite reports a known failure that is not
+# one any more.
+xfail_strict = true
+
+# The markers, and this list is the whole of what --strict-markers permits.
+#
+# The split is by directory first: tests/unit and tests/e2e. The markers exist
+# so that a selection can be written without a path, which is what a workflow
+# matrix and an editor's run button both want, and so that the split cannot be
+# lost the day somebody moves a file.
+#
+# The split is here from the first day rather than retrofitted, because
+# milestone 4 adds end-to-end runs through the fake adapter and retrofitting a
+# split means editing every file that already exists.
+markers = [
+  "unit: fast, in-process, touches no subprocess and no file outside tmp_path",
+  "e2e: end to end through a real entry point, allowed to be slow",
+]

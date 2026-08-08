@@ -52,21 +52,20 @@ contributor to learn or to argue with.
 
 Strict mode, reading `[tool.mypy]` in `pyproject.toml`. The `files` entry there
 is the whole of what the bare command covers, so the command cannot drift away
-from the scope it is supposed to have. That scope is the package and nothing
-else:
+from the scope it is supposed to have. That scope is the package and the tests:
 
     $ grep -n '^files' pyproject.toml
-    175:files = ["src"]
+    181:files = ["src", "tests"]
 
     $ git ls-files tests | wc -l
-    0
+    4
 
-The tests are outside it because there are none yet. mypy refuses a path that
-does not exist and refuses a directory holding no Python file, so naming
-`tests` today would make the documented command exit 2 on a clean tree. Adding
-it is what issue #14 owes issue #15, and until that is done this command says
-nothing at all about the half of the tree where the assertions will live. A
-type error in a test would not be reported by it.
+The tests were outside it until issue #14 created a directory for mypy to read.
+mypy refuses a path that does not exist and refuses a directory holding no
+Python file, so naming `tests` on an empty tree made the documented command exit
+2. That is what #14 owed this issue and it is paid, so the command now covers
+the half of the tree where the assertions live and a type error in a test is
+reported.
 
 Strict from the first commit, because strictness is affordable on an empty tree
 and unaffordable on a full one. An import with no type information is an error
@@ -80,10 +79,23 @@ naming the untyped dependency that forces it.
 
 ## What these do not cover
 
-None of the three runs the test suite. That is a separate command and a separate
-check.
+None of the three runs the test suite. That is a fourth command:
 
-None of the three refuses a tracked audio file. That is a fourth command:
+    python -m pytest
+
+It reads `[tool.pytest.ini_options]` in `pyproject.toml`, which names `tests` as
+the only path it collects from, promotes warnings to errors, and refuses an
+unregistered marker and an unknown key in its own configuration. `CONTRIBUTING.md`
+says how the fast and the slow halves are selected. Like the three above,
+nothing runs it on a pull request yet; #17 is where it becomes a check name.
+
+What it does not catch is a test that simply contains no assertion. pytest has
+no mechanism for that. The configuration promotes pytest's return-not-None
+warning to an error, which catches a test that computes a value and returns it
+instead of asserting on it, and that is the nearest thing available rather than
+the thing itself.
+
+None of the three refuses a tracked audio file. That is a fifth command:
 
     python tools/refuse_tracked_audio.py
 
