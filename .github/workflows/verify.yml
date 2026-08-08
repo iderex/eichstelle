@@ -1,0 +1,239 @@
+# The gate. Five workflows already run here and none of them builds or tests
+# anything, because until the runner and the lock file landed there was nothing
+# to build. This is the one that runs what a contributor runs.
+#
+# The check names are part of the deliverable rather than a detail. A required
+# status check is matched by the literal name of the check run, and a check run
+# takes its name from a job's `name` field, falling back to the job id when none
+# is set. Renaming a job therefore detaches it from whatever required it,
+# silently. The four names below are chosen once and `docs/ci-checks.md` says
+# what a failure of each one means. The dependency-review workflow in this
+# repository deliberately carries no `name` on its job for the same reason, and
+# nothing here touches it.
+#
+# Each job does one thing, so a red check says what is wrong before anybody
+# opens a log.
+#
+# Hardened the way every other workflow here is: actions pinned by commit hash
+# with a version comment, checkout without persisted credentials, deny-all
+# permissions at workflow level with the minimum granted per job, and a
+# superseded run cancelled. The workflow-security audit refuses a departure from
+# that and it runs on this file like any other.
+name: verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["**"]
+
+# Explicit deny-all at workflow level; each job below grants only what it needs.
+permissions: {}
+
+# Cancel a superseded run on the same ref. Every job here is a read-only
+# analysis or a test run, so cancelling one costs nothing that has to be undone.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    # The linter and the formatter, both in refusing mode. One job rather than
+    # two because a contributor fixes both with the same two local commands and
+    # a split would double the check names for one class of failure.
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the token in .git/config.
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set
+        # Locked mode. uv refuses when uv.lock does not match what
+        # pyproject.toml declares, instead of resolving something newer, so this
+        # job runs the tool versions somebody recorded rather than whatever
+        # released this morning. A freshly resolved linter is a gate whose rules
+        # move without a diff.
+        run: uv sync --locked
+
+      - name: Run the linter
+        # The same characters docs/quality-gates.md tells a contributor to type.
+        # If this line and that document ever diverge, this line is the one that
+        # is wrong.
+        run: .venv/bin/ruff check
+
+      - name: Run the formatter in check mode
+        run: .venv/bin/ruff format --check
+
+  types:
+    # The type checker, strict, over the package and the tests. Its scope is the
+    # `files` entry in [tool.mypy], not an argument here, so the command cannot
+    # cover less on this runner than it covers on a contributor's machine.
+    name: types
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set
+        run: uv sync --locked
+
+      - name: Run the type checker
+        run: .venv/bin/mypy
+
+  tests:
+    # One leg per interpreter version this project declares support for. The
+    # matrix leg is in the check name, so a red check names the runtime before
+    # anybody opens it.
+    name: tests (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    strategy:
+      # A failing leg must not cancel the others. Otherwise the first red leg
+      # removes the evidence about every other runtime in the same run, which is
+      # the one thing this matrix exists to produce.
+      fail-fast: false
+      matrix:
+        # These four are what `classifiers` in pyproject.toml declares and what
+        # `requires-python = ">=3.11,<3.15"` admits. A leg per declared version
+        # rather than the two ends of the range: the package metadata asserts
+        # support for four interpreters, and an assertion no run ever exercises
+        # is the kind of claim this repository refuses everywhere else. The cost
+        # is four short jobs. Adding or removing a version here means editing
+        # the classifiers, the floor or the ceiling in the same change.
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set
+        # The matrix value reaches the shell as an environment variable rather
+        # than as an expansion inside the script, which is the pattern the other
+        # workflows here use and the one the workflow-security audit expects.
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+        run: |
+          set -euo pipefail
+          uv sync --locked --python "$PYTHON_VERSION"
+          .venv/bin/python -VV
+
+      - name: Run the suite with no outbound network
+        # This is the last step. Everything the run needs is already on disk, so
+        # from here the job has no business reaching the network and is not
+        # allowed to.
+        #
+        # The sandbox is an empty network namespace: `unshare --net` gives the
+        # process a stack with nothing in it but a loopback interface, which is
+        # brought up so that anything binding to localhost still works. Nothing
+        # is installed to arrange this and no third-party action is trusted with
+        # it.
+        #
+        # The two connection attempts are the proof. A refused connection inside
+        # the namespace on its own proves only that something was unreachable at
+        # that moment, which is equally what a dead runner network looks like.
+        # The attempt outside establishes that there was egress to remove, and
+        # the identical attempt inside the very namespace the suite then runs in
+        # is what shows it was removed. If the inner attempt ever succeeds the
+        # job fails and says so, rather than running the suite under a promise
+        # that is not being kept.
+        run: |
+          set -euo pipefail
+
+          curl --silent --show-error --fail --retry 3 --max-time 20 \
+            --output /dev/null https://pypi.org/simple/
+          echo "outside the sandbox: the request succeeded, so there is egress to remove"
+
+          sudo unshare --net -- bash -c '
+            set -euo pipefail
+            ip link set lo up
+
+            if curl --silent --show-error --fail --max-time 20 \
+                 --output /dev/null https://pypi.org/simple/; then
+              echo "::error::The same outbound request succeeded inside the network namespace the suite runs in. The offline claim is false and this run proves nothing about it."
+              exit 1
+            fi
+            echo "inside the sandbox: the same request was refused"
+
+            # Drop back to the unprivileged user the workspace belongs to, so
+            # the suite does not run as root and leave root-owned files behind.
+            # HOME is set explicitly because sudo reset it to root.
+            exec runuser -u runner -- env HOME=/home/runner ./.venv/bin/python -m pytest
+          '
+
+  fixtures:
+    # Every fixture against the schema, and the signal checksums. Both halves
+    # are empty today and this job exists anyway, so that the fixture work in
+    # milestone 3 has a check name to land into rather than arriving with one.
+    #
+    # An empty job that prints nothing and reports green is the failure this
+    # whole workflow is against, so it says out loud how many fixtures it read
+    # and it says that the checksum half does not exist yet. A reader who sees
+    # this check green learns exactly what it asserted, which today is nothing.
+    name: fixtures
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set
+        run: uv sync --locked
+
+      - name: Validate every fixture against the schema
+        # The count comes from the index rather than from the working tree, so
+        # an untracked file somebody left in the checkout is not validated and
+        # cannot make this check look busier than it is.
+        #
+        # The validator itself exits 2 over an empty directory and says it
+        # refuses to report a clean run over nothing. That is right for somebody
+        # who typed a path and got no files, and wrong as a red check on every
+        # pull request for a milestone. So the empty case is decided here, in
+        # the open, and the moment one fixture is tracked the validator's own
+        # exit code becomes this job's.
+        run: |
+          set -euo pipefail
+          tracked=$(git ls-files -- 'fixtures/*.json' | wc -l)
+
+          if [ "$tracked" -eq 0 ]; then
+            echo "0 fixtures validated: no fixture is tracked under fixtures/ at this commit."
+            echo "::warning::The fixtures check asserted nothing about correctness at this commit. There is no fixture set yet; milestone 3 is where one arrives."
+          else
+            echo "$tracked tracked fixture file(s) under fixtures/"
+            .venv/bin/python -m eichstelle.fixtures fixtures/
+          fi
+
+          # A negative disclosure, printed on every run rather than written once
+          # in a document nobody opens next to the green tick. This job's name
+          # promises the schema and the checksums; it delivers the first half
+          # only, and issue #25 is where the second arrives.
+          echo "0 signal checksums verified: nothing in this tree records a stimulus checksum yet (issue #25)."
