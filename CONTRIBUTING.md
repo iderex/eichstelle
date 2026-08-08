@@ -53,6 +53,21 @@ them on a pull request. `docs/quality-gates.md` says so in its own words and
 shows the command behind the claim. Issue #15 and issue #17 are where that
 changes.
 
+## Running the tests
+
+    python -m pytest
+
+That is the whole suite, and it is one invocation with no path or flag, so that
+the workflow issue #17 adds can run the same characters and a green run here
+means what a green check there means. No workflow runs it today. It needs the
+project installed, because the package reads its own version from the installed
+distribution: `python -m pip install -e . --group dev`.
+
+The suite is split into fast in-process tests under `tests/unit` and slower
+end-to-end runs under `tests/e2e`, selected either by that path or by the marker
+of the same name with `-m unit` or `-m e2e`, and the marker is derived from the
+directory in `tests/conftest.py` so the two cannot drift apart.
+
 ## The checks that run on a pull request
 
 Not listed here. `docs/ci-checks.md` is the one place that names them, so that
