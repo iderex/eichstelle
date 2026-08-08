@@ -65,8 +65,16 @@ def with_parameters(**changes: Any) -> dict[str, Any]:
 
 
 def root_mean_square(values: list[float]) -> float:
-    """The root mean square of a sample run."""
-    return math.sqrt(sum(value * value for value in values) / len(values))
+    """The root mean square of a sample run.
+
+    Summed with `math.fsum` rather than `sum`. A running float sum over tens of
+    thousands of terms accumulates an error that grows with the count and
+    differs between interpreters and platforms, and that error would otherwise
+    sit inside every level measured here and be mistaken for the generator's.
+    `math.fsum` is exact to the last bit, so what is left is the platform's own
+    rounding of `sin`.
+    """
+    return math.sqrt(math.fsum(value * value for value in values) / len(values))
 
 
 def level_of(values: list[float], reference_db_spl: float) -> float:
@@ -113,6 +121,18 @@ def test_the_measured_level_is_exact_over_a_whole_number_of_half_periods() -> No
     multiple of 24 samples holds a whole number of half periods and the root
     mean square is the peak over the square root of two with nothing left over.
     This is the same measurement as above with the excuse taken away.
+
+    The bound is a billionth of a decibel, and it is derived rather than
+    measured. `root_mean_square` sums with `math.fsum`, so the summation
+    contributes nothing; what is left is the platform's rounding of `sin`, of
+    order one part in 1e16 per sample, which reaches the level through
+    20 / ln(10) / 2 and lands near 1e-14 dB. A billionth is five orders above
+    that and fourteen orders below anything acoustically meaningful.
+
+    An earlier version of this test summed with `sum` and carried a bound of
+    1e-12, taken from what one machine happened to print. The 3.11 leg of the
+    matrix refused it at 1.17e-12, which is the accumulated summation error
+    over 48000 terms and not a property of the generator at all.
     """
     signal = parse_sinusoid(
         with_parameters(fade={"shape": "none", "duration_seconds": "0"})
@@ -122,7 +142,7 @@ def test_the_measured_level_is_exact_over_a_whole_number_of_half_periods() -> No
 
     measured = level_of(samples[:whole], signal.calibration_reference_db_spl)
 
-    assert abs(measured - 60.0) < 1e-12, measured
+    assert abs(measured - 60.0) < 1e-9, measured
 
 
 def test_the_level_names_the_tone_and_not_the_faded_signal() -> None:
