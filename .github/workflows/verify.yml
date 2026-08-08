@@ -166,8 +166,9 @@ jobs:
             --output /dev/null https://pypi.org/simple/
           echo "outside the sandbox: the request succeeded, so there is egress to remove"
 
-          sudo bash -c '
+          sudo unshare --net -- bash -c '
             set -euo pipefail
+            ip link set lo up
 
             if curl --silent --show-error --fail --max-time 20 \
                  --output /dev/null https://pypi.org/simple/; then
