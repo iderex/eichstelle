@@ -20,3 +20,4 @@
 # exception is visible in a change rather than granted by editing the script.
 #
 # Lines beginning with # are comments and blank lines are ignored.
+docs/ci-checks.md
