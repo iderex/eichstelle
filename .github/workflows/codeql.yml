@@ -1,0 +1,81 @@
+# Semantic static analysis of this repository's own code, with findings in the
+# code scanning view beside the supply-chain self-audit and the workflow-security
+# audit, so a reviewer has one place to look rather than three.
+#
+# Two languages, and both of them are code here. `python` is the harness, the
+# validator and the tools. `actions` is the workflow YAML, which is analysed by
+# the workflow-security audit for its own class of defect and by CodeQL for
+# another; the two overlap in places and neither is a superset of the other.
+# Neither language needs a build, so no build step exists and none is skipped.
+#
+# `security-extended` rather than the default suite, matching what the target
+# board in docs/quality-parity.md runs. That document is where the parity claim
+# and its deviations live, and where the rule for triaging what this finds is
+# written.
+#
+# Advanced setup rather than GitHub's default setup, so the triggers are in the
+# tree and reviewable rather than in a repository setting nobody sees in a diff.
+#
+# Hardened the way every other workflow here is: actions pinned by commit hash
+# with a version comment, checkout without persisted credentials, deny-all
+# permissions at workflow level with the minimum granted per job. The
+# workflow-security audit refuses a departure from that, and it runs on this
+# file like any other.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: ["**"]
+  schedule:
+    # Weekly, so a query published after a file was last touched still finds an
+    # old defect instead of waiting for somebody to touch the file again. The
+    # minute is not on the hour, because a schedule on the hour queues behind
+    # every other repository that also chose the hour.
+    - cron: "23 4 * * 2"
+
+# Explicit deny-all at workflow level; the job below grants only what it needs.
+permissions: {}
+
+# Cancel a superseded run on the same ref so a new push or pull request update
+# does not queue behind an obsolete scan. This is analysis, not a publish, so
+# cancelling is safe.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      security-events: write # upload the analysis into the code-scanning view
+      contents: read # check out the code to analyse
+      actions: read # required for CodeQL to analyse the `actions` language
+    strategy:
+      # One language failing must not cancel the other's analysis, or a broken
+      # leg silently removes coverage the run still reports as complete.
+      fail-fast: false
+      matrix:
+        language: [python, actions]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the token in .git/config.
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: none
+          queries: security-extended
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4.37.3
+        with:
+          category: "/language:${{ matrix.language }}"
