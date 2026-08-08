@@ -156,45 +156,140 @@ at all, so an adapter needing one would not work there.
 
 You do not require a display. The same reason: nothing is guaranteed to have one.
 
-None of these is enforced today, and neither is the environment they describe.
-Record 0010 says of itself that until issues #49 and #52 land it is prose, and no
-workflow in this repository runs the suite with the network denied:
+None of these is enforced against an adapter today. Record 0010 says of itself
+that until issues #49 and #52 land it is prose. What has changed since this
+paragraph was written is the environment rather than the enforcement: the
+`verify` workflow now runs this project's own suite inside an empty network
+namespace, and says so out loud.
 
-    grep -rn -i network .github/workflows/ ; echo "exit=$?"
-    exit=1
+    grep -rn -i network .github/workflows/ | wc -l
+    5
 
-So an adapter that opens a socket will not be caught here. These are the
-contract, and breaking them is a defect in that adapter rather than something
-this project detects for you.
+So the suite runs where there is no egress, which is the environment an adapter
+has to work in, and nothing in that arrangement inspects an adapter. An adapter
+that opens a socket will not be caught here. These are the contract, and
+breaking them is a defect in that adapter rather than something this project
+detects for you.
 
 ## Capabilities
 
-A job with `kind` set to `capabilities` carries no fixture and no signal. Answer
-with a result whose `capabilities` field lists the metrics you claim and, per
-metric, the editions you claim.
+A job with `kind` set to `capabilities` carries no fixture and no signal. It
+asks one question: what do you do?
 
 ```json
 {
   "protocol_version": 1,
   "status": "ok",
   "capabilities": [
-    { "metric": "loudness", "editions": [2017] },
+    {
+      "metric": "loudness",
+      "editions": [2017],
+      "field_conditions": ["free", "diffuse"],
+      "calibration_conventions": ["full_scale_sine"]
+    },
     { "metric": "sharpness", "editions": [2009, 2017] }
   ],
+  "sample_rates": [44100, 48000],
+  "upstream_version": "1.4.2",
   "diagnostic": ""
 }
 ```
 
-The harness reads that once per run and reports a metric you do not claim as
-`unsupported` without invoking you for it. That is why the declaration exists as
-a mechanism rather than as documentation.
+Three fields, and every one of them is required on a declaration.
 
-It travels through the same job and result files as a measurement, so you
-implement one contract and not two, and your declaration is validated the same
-way your answers are.
+| field | type | meaning |
+| --- | --- | --- |
+| `capabilities` | array | One entry per metric you claim. |
+| `sample_rates` | array of integers | The rates in hertz you accept, enumerated. |
+| `upstream_version` | string | The version of the implementation you wrapped, as loaded. |
 
-What the harness does with the declaration is issue #34 and is not built. Today
-nothing asks any adapter for its capabilities.
+Each entry in `capabilities`:
+
+| field | type | meaning |
+| --- | --- | --- |
+| `metric` | string | The quantity, lowercase with underscores. |
+| `editions` | array of integers | The standard editions you claim for it. Required, and at least one. |
+| `field_conditions` | array of strings | Optional. The field conditions you claim for this metric. |
+| `calibration_conventions` | array of strings | Optional. The conventions you can be told for this metric. |
+
+The declaration travels through the same job and result files as a measurement,
+so you implement one contract and not two, and it is validated the same way your
+answers are.
+
+### What the harness does with it
+
+It asks once per run, before any fixture is invoked, and it decides every pair
+of fixture and adapter against the answer. A pair you did not claim is recorded
+as unsupported with the reason, and you are never invoked for it.
+
+The reasons are separate rather than one shared decline, because they are
+different statements about your implementation: `metric_not_declared`,
+`edition_not_declared`, `sample_rate_not_accepted`,
+`field_condition_not_declared` and `calibration_convention_not_declared`.
+
+### Declare narrowly, and why
+
+The instinct is to claim everything and let the results speak. The outcome is a
+wall of errors that reads, to anybody looking at the report, like your library is
+broken. It was asked questions it never claimed to answer, and each one became a
+red line with your name on it.
+
+Declaring narrowly costs nothing. A metric you do not claim is reported as
+coverage rather than as correctness. Adding a claim later is one line.
+
+There is a difference the report depends on: an error from a capability you
+DECLARED is a stronger finding than a decline from one you did not, and the
+record keeps the two apart. Declaring honestly is what keeps that distinction
+worth anything.
+
+### Absent means none, not all
+
+An optional field left out is a claim of NONE rather than a claim of all. A
+fixture asking for a free field against a metric whose entry names no
+`field_conditions` is unsupported and is not invoked.
+
+The other reading is the dangerous one. Free field and diffuse field give
+different answers for the same signal, and an implementation handed a fixture it
+never said it could place would answer in whichever it defaults to. That value
+would arrive in the report looking like a disagreement about loudness.
+
+Same for the calibration convention. A convention you assume rather than accept
+moves every value you produce, in one direction, invisibly.
+
+`sample_rates` is enumerated and not a range, because a range has to be
+interpreted, and an adapter that quietly resamples to suit itself is what the
+no-corrections rule forbids.
+
+### The version, and the honest unknown
+
+`upstream_version` is what you LOADED, not what you pinned. Those two can differ,
+and when they do a result attributed to the pin is wrong in a way nothing else
+would catch.
+
+Where the library exposes no version at all, write the empty string. That is the
+declared unknown and it reaches the report as an unknown, because a result
+attributed to a version nobody can identify is not reproducible and the reader is
+entitled to see which of the two they are holding. Do not fill it in with a
+plausible number.
+
+### If you cannot answer
+
+An adapter that fails the capability query is unusable, and the run says so
+ONCE, against the adapter, rather than failing every fixture separately. A
+declaration the schema refuses is the same case: nothing partial is taken from
+it.
+
+### One note on the version of this contract
+
+The three declaration fields were specified here by issue #34, and two of them,
+`sample_rates` and `upstream_version`, became required after protocol version 1
+was published. The rule below says adding a required field raises the version.
+It was not raised, and the reason is written down rather than left out: until
+this change nothing in this project ever asked an adapter for its capabilities,
+so no adapter could have been written against the declaration in a way that ran.
+The versioning rule protects an adapter author who has something working, and on
+this document shape there was nobody in that position. From here it applies
+normally.
 
 ## A complete worked example
 
