@@ -129,21 +129,95 @@ A `signal.kind` no generator produces is refused for the same reason.
 
 ## Signal kinds
 
-The schema carries a closed parameter set per kind. Two kinds are defined,
-`sinusoid` and `amplitude_modulated_sinusoid`, and both are held to what
+The schema carries a closed parameter set per kind. Five kinds are defined:
+`sinusoid`, `amplitude_modulated_sinusoid`, `frequency_modulated_sinusoid`,
+`noise` and `band_limited_noise`. All of them are held to what
 `docs/calibration.md` fixes: the calibration reference is a required field with
 no default, and a modulated description states which level reading it means,
 because at full depth the two differ by 1.76 dB in the same direction on exactly
 the fixtures the roughness and fluctuation strength anchors rest on.
 
-Neither generator exists yet. Issue #21 builds the sinusoid, #23 the modulated
-one and #22 the noise kinds, and each of those adds its kind to the enum and its
-closed parameter set beside it. Adding a kind makes no fixture that is valid
-today invalid, so it does not raise the schema version.
+A kind arrives with the generator that produces it and its closed parameter set
+beside it. Adding a kind makes no fixture that is valid today invalid, so it does
+not raise the schema version.
 
-`fade` is required on both kinds and carries a shape and a duration. Which
+`fade` is required on every kind and carries a shape and a duration. Which
 shapes a generator accepts is the generator's to decide, so the schema checks
 that the field is there and says nothing about which shapes are legal.
+
+### The noise kinds, and the stream they are reproducible through
+
+A tone is reproducible because its description determines it. A noise is not.
+The samples come from a pseudo-random sequence that depends on an algorithm, a
+seed and the version of whatever produced it, and none of the three is visible
+in the output. Two runs of one fixture on two machines can produce two different
+noises, both looking exactly like noise, and the metric difference that follows
+cannot be told from an implementation disagreeing.
+
+So `random_algorithm` and `random_seed` are both required, and a description
+missing either is refused rather than defaulted.
+
+The generator this repository implements is `xoshiro256plusplus`, written out in
+`src/eichstelle/signals/noise.py` rather than taken from a library. That is the
+whole point of naming an algorithm in a fixture: the name has to identify a
+sequence somebody can still produce in ten years.
+
+A library default is not acceptable here, and the reason is specific rather than
+cautious. The standard library's `random` and a numeric library's default
+generator both produce a stream their maintainers may change between releases,
+deliberately and legitimately, and a change would move every noise fixture in the
+set at once while nothing in any fixture recorded that it had happened. A fixture
+would still validate, still name its seed, and produce a different stimulus. The
+seed alone does not identify a sequence; a named algorithm this repository
+implements does.
+
+The suite pins the first words of the stream for a known seed, so a change to the
+generator is a failing test rather than a quiet change to every noise fixture.
+
+### The spectral shape, and the filter
+
+`noise` carries a `spectral_shape`. Two are produced, `white` and `pink`. Pink
+is realised as a ladder of first-order sections, and it is an approximation: over
+a band from 20 Hz to a fifth of the sample rate it stays within 0.6 dB of an
+exact minus three decibels per octave, which the suite measures rather than
+claims.
+
+`band_limited_noise` carries `low_edge_hz`, `high_edge_hz`, `filter_type` and
+`filter_order`, and all four are required. The filter is part of the stimulus.
+A band one critical band wide made with a brick wall and one made with a
+realisable filter of stated order are different signals with different metric
+values, so a description naming only the edges has not said what it means.
+
+The edges are the half-power points, meaning where the response is 3 dB down,
+and the design pre-warps them so they land there rather than near there.
+
+`filter_order` is the order of the family's PROTOTYPE. The low-pass to band-pass
+transformation maps each prototype pole to two, so a `filter_order` of 4 is
+realised as a band-pass with eight poles whose skirts fall at 24 dB per octave.
+A fixture author writing 4 and expecting a fourth-order response would be
+describing a different stimulus from the one produced, which is why the factor is
+stated here rather than left in the code.
+
+One family is built, `butterworth`, chosen because it is maximally flat in the
+pass band, which is what a fixture wants when the band edges are the statement
+being made. A brick wall would be a second value rather than a synonym.
+
+### The level of a noise
+
+Stated the same way as for a tone, as a sound pressure level against the same
+calibration reference. The generator scales to hit it MEASURED from the samples
+it produced rather than computed from theory: a filter has pass band ripple and a
+shaping ladder has its own, so the two differ, and the fixture's number has to be
+the one a meter would read.
+
+The root mean square over the sustain is the requested level, which is the same
+convention the tone generator carries and is why the fade is excluded from the
+measurement.
+
+A noise peaks well above its root mean square, so a level a tone carries
+comfortably can put a noise outside the range a sample holds. That is refused
+rather than clipped, because clipping is broadband energy every metric under test
+would see.
 
 ## Versioning
 

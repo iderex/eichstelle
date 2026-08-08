@@ -152,7 +152,9 @@
           "enum": [
             "sinusoid",
             "amplitude_modulated_sinusoid",
-            "frequency_modulated_sinusoid"
+            "frequency_modulated_sinusoid",
+            "noise",
+            "band_limited_noise"
           ]
         },
         "sample_rate": {
@@ -230,8 +232,137 @@
               }
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "noise"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "parameters": {
+                "$ref": "#/$defs/noise_parameters"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "band_limited_noise"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "parameters": {
+                "$ref": "#/$defs/band_limited_noise_parameters"
+              }
+            }
+          }
         }
       ]
+    },
+    "random_algorithm": {
+      "description": "The bit generator that produces the stream, by name. Required beside the seed, because a seed on its own does not identify a sequence: a generator's stream is its maintainer's to change between releases, a change would move every noise fixture at once, and nothing in the fixture would record that it had happened. Which names exist belongs to the generator and is not enumerated here.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "random_seed": {
+      "description": "The seed. Required, and never defaulted inside a generator: a noise with no seed is a different stimulus on every run and the fixture would not say so. A count rather than a physical quantity, so it stays a JSON number and is exact.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "noise_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "random_algorithm",
+        "random_seed",
+        "spectral_shape",
+        "level_db_spl",
+        "calibration_reference_db_spl",
+        "fade"
+      ],
+      "properties": {
+        "random_algorithm": {
+          "$ref": "#/$defs/random_algorithm"
+        },
+        "random_seed": {
+          "$ref": "#/$defs/random_seed"
+        },
+        "spectral_shape": {
+          "description": "The broadband shape. Which shapes exist belongs to the generator, so this is a name rather than an enumeration here; a shape no generator produces is refused by the generator.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "level_db_spl": {
+          "description": "The sound pressure level of the produced signal, stated the same way as for a tone and against the same calibration reference. The generator scales to hit it measured from the samples it produced rather than computed from theory, because a shaping filter has ripple and the fixture's number has to be the one a meter would read.",
+          "$ref": "#/$defs/decimal"
+        },
+        "calibration_reference_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "fade": {
+          "$ref": "#/$defs/fade"
+        }
+      }
+    },
+    "band_limited_noise_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "random_algorithm",
+        "random_seed",
+        "low_edge_hz",
+        "high_edge_hz",
+        "filter_type",
+        "filter_order",
+        "level_db_spl",
+        "calibration_reference_db_spl",
+        "fade"
+      ],
+      "properties": {
+        "random_algorithm": {
+          "$ref": "#/$defs/random_algorithm"
+        },
+        "random_seed": {
+          "$ref": "#/$defs/random_seed"
+        },
+        "low_edge_hz": {
+          "description": "The lower half-power edge of the band.",
+          "$ref": "#/$defs/decimal"
+        },
+        "high_edge_hz": {
+          "description": "The upper half-power edge of the band.",
+          "$ref": "#/$defs/decimal"
+        },
+        "filter_type": {
+          "description": "The filter family. Required, and not defaulted, because the filter is part of the stimulus: a band one critical band wide made with a brick wall and one made with a realisable filter are different signals with different metric values, and a description naming only the edges does not say which it means.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "filter_order": {
+          "description": "The order of the filter family's prototype. A count, so it stays a JSON number. What the number means for the realised response belongs to the generator and is stated in docs/fixtures.md.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "level_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "calibration_reference_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "fade": {
+          "$ref": "#/$defs/fade"
+        }
+      }
     },
     "sinusoid_parameters": {
       "type": "object",
