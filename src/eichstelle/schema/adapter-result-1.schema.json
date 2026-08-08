@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/iderex/eichstelle/blob/main/src/eichstelle/schema/adapter-result-1.schema.json",
+  "title": "eichstelle adapter result, protocol version 1",
+  "description": "What an adapter writes to the path its job named. An adapter may write exactly three statuses. The four further outcomes a run can have, timeout, crashed, no_result and malformed_result, are recorded by the harness and cannot be written here, because in each of those cases there is no adapter statement worth trusting. Decision record 0006 is where that split is argued: a report that merges an implementation which honestly declined with one that fell over cannot tell a reader which response either calls for.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol_version", "status", "diagnostic"],
+  "properties": {
+    "protocol_version": {
+      "description": "Echoed from the job.",
+      "const": 1
+    },
+    "fixture_id": {
+      "description": "Echoed from the job, so a result written to the wrong path is detected rather than misattributed. Required on a measurement result and absent from a capability declaration, which is about no fixture.",
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "description": "`ok` means the metric was computed and `values` is the answer. `unsupported` means the adapter does not claim this metric, or this edition, and is declining rather than failing. `error` means it tried and could not, and `diagnostic` says why.",
+      "enum": ["ok", "unsupported", "error"]
+    },
+    "values": {
+      "description": "A list rather than a scalar because a time-varying metric answers with a series, and a contract that starts scalar acquires a second shape later. Decimal strings, for the reason a fixture uses them.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/decimal"
+      }
+    },
+    "unit": {
+      "description": "What the values are in.",
+      "type": "string",
+      "minLength": 1
+    },
+    "edition": {
+      "description": "The edition the adapter actually answered against, which is not always the one requested and is the thing a false finding turns on.",
+      "type": "integer",
+      "minimum": 1900
+    },
+    "diagnostic": {
+      "description": "Free text for a human reading a failure. It carries no meaning to the harness and nothing branches on it. Required, and permitted to be empty, so that the field is always there to read rather than sometimes absent.",
+      "type": "string"
+    },
+    "capabilities": {
+      "description": "Present on the answer to a capabilities job and on nothing else. The metrics this adapter claims and, per metric, the standard editions it claims. What the harness does with it is issue #34; what it looks like is here so that an adapter author writes one document shape.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["metric", "editions"],
+        "properties": {
+          "metric": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "editions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "integer",
+              "minimum": 1900
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "description": "A successful measurement carries an answer. Without this an adapter could report ok with nothing in it, and a run would record agreement it never computed. A capability declaration is also a successful answer and measures nothing, so it is excluded here rather than being forced to carry a fixture it is not about.",
+      "if": {
+        "allOf": [
+          {
+            "properties": {
+              "status": {
+                "const": "ok"
+              }
+            },
+            "required": ["status"]
+          },
+          {
+            "not": {
+              "required": ["capabilities"]
+            }
+          }
+        ]
+      },
+      "then": {
+        "required": ["fixture_id", "values", "unit", "edition"],
+        "properties": {
+          "values": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "description": "A declined or failed measurement carries no values. A number alongside `unsupported` or `error` is a contradiction, and the reader who takes the number is the one this refusal is for.",
+      "if": {
+        "properties": {
+          "status": {
+            "enum": ["unsupported", "error"]
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "values": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "description": "A capability declaration is about no fixture and carries no measurement.",
+      "if": {
+        "required": ["capabilities"]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["fixture_id"] },
+            { "required": ["unit"] }
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?$"
+    }
+  }
+}

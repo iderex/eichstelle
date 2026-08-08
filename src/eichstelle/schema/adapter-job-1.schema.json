@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/iderex/eichstelle/blob/main/src/eichstelle/schema/adapter-job-1.schema.json",
+  "title": "eichstelle adapter job, protocol version 1",
+  "description": "What the harness writes to a file and hands an adapter the path to. Decision record 0006 in docs/decisions is where the contract is argued and docs/adapter-contract.md is how to satisfy it. Every physical quantity is a decimal string for the same reason as in a fixture: a JSON number is an IEEE 754 double in every parser this contract has to cross.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol_version",
+    "kind",
+    "result_path",
+    "working_directory",
+    "timeout_seconds"
+  ],
+  "properties": {
+    "protocol_version": {
+      "description": "So an adapter written against an older contract refuses rather than guesses.",
+      "const": 1
+    },
+    "kind": {
+      "description": "A measurement, or a declaration of what this adapter claims. Both travel through the same job and result files, so an adapter author implements one contract and not two.",
+      "enum": ["measure", "capabilities"]
+    },
+    "fixture_id": {
+      "description": "Copied from the fixture. Echoed in the result so an answer written to the wrong path is detected rather than misattributed.",
+      "type": "string",
+      "minLength": 1
+    },
+    "fixture_revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "signal_path": {
+      "description": "An absolute path to the generated stimulus. The file is read-only, it lives outside the working directory, and the same file is handed to every adapter in a run, so a disagreement is about the implementations and never about the bytes they were given.",
+      "type": "string",
+      "minLength": 1
+    },
+    "sample_rate": {
+      "description": "In hertz, describing the file at signal_path.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "channels": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "metric": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "metric_parameters": {
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
+    },
+    "standard": {
+      "type": "string",
+      "minLength": 1
+    },
+    "part": {
+      "type": "string",
+      "minLength": 1
+    },
+    "edition": {
+      "description": "Which edition the answer is expected to be against. The result says which edition the adapter actually answered against, and the two are not always the same.",
+      "type": "integer",
+      "minimum": 1900
+    },
+    "result_path": {
+      "description": "Where the adapter writes its result. An adapter writes here and nowhere else outside its working directory.",
+      "type": "string",
+      "minLength": 1
+    },
+    "working_directory": {
+      "description": "A fresh directory the harness created for this invocation and will delete afterwards. It is the process working directory. An adapter may not write outside it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "timeout_seconds": {
+      "description": "The limit the harness will terminate at. It is in the job so an adapter that wants to give up early can, and so the number is not a secret the harness keeps to itself.",
+      "$ref": "#/$defs/decimal"
+    }
+  },
+  "allOf": [
+    {
+      "description": "A measurement job carries a fixture, a signal and a metric. A capability job carries none of them, so requiring them unconditionally would refuse half the contract.",
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "measure"
+          }
+        },
+        "required": ["kind"]
+      },
+      "then": {
+        "required": [
+          "fixture_id",
+          "fixture_revision",
+          "signal_path",
+          "sample_rate",
+          "channels",
+          "metric",
+          "metric_parameters",
+          "standard",
+          "part",
+          "edition"
+        ]
+      }
+    },
+    {
+      "description": "A capability job carries no fixture and no signal. Naming one would invite an adapter to answer about a stimulus that was never generated.",
+      "if": {
+        "properties": {
+          "kind": {
+            "const": "capabilities"
+          }
+        },
+        "required": ["kind"]
+      },
+      "then": {
+        "not": {
+          "anyOf": [
+            { "required": ["fixture_id"] },
+            { "required": ["signal_path"] },
+            { "required": ["metric"] }
+          ]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "decimal": {
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?$"
+    }
+  }
+}
