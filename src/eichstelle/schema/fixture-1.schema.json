@@ -1,0 +1,280 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/iderex/eichstelle/blob/main/src/eichstelle/schema/fixture-1.schema.json",
+  "title": "eichstelle fixture, schema version 1",
+  "description": "One fixture, one file. A fixture binds a regenerable signal, a metric, an expected value, a tolerance and a standard edition into one thing that can be cited by path. Decision record 0004 in docs/decisions is where the shape below is argued; docs/fixtures.md is how to write one. A published schema version is never edited: a correction that would refuse a fixture which is valid today is a new version and a migration.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "revision",
+    "schema_version",
+    "title",
+    "signal",
+    "metric",
+    "metric_parameters",
+    "expected",
+    "unit",
+    "tolerance",
+    "tolerance_kind",
+    "standard",
+    "provenance"
+  ],
+  "properties": {
+    "id": {
+      "description": "Stable identifier, never changed once the fixture has landed. It is what a result record names and what a published finding cites.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "revision": {
+      "description": "Starts at 1 and moves only when the fixture is corrected under the narrow exception in decision record 0008. A result record names the revision it ran against.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "schema_version": {
+      "description": "The schema version this fixture targets. The validator selects a schema by this field and refuses a version it does not know, rather than falling back to the newest one it happens to have.",
+      "const": 1
+    },
+    "title": {
+      "description": "A short line saying what the fixture is for, written for somebody reading a failure.",
+      "type": "string",
+      "minLength": 1
+    },
+    "signal": {
+      "$ref": "#/$defs/signal"
+    },
+    "metric": {
+      "description": "The quantity to compute.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "metric_parameters": {
+      "description": "The arguments the quantity takes, which differ between metrics and between editions. Its per-metric shape belongs to the issue that adds the metric, so it is open here. Every physical quantity inside it is a decimal string for the reason given on `expected`.",
+      "type": "object",
+      "propertyNames": {
+        "$ref": "#/$defs/field_name"
+      }
+    },
+    "expected": {
+      "description": "The value this fixture asserts, as a decimal string rather than a JSON number. A JSON number is an IEEE 754 double in every parser this project will meet, so a tolerance written as 0.1 arrives as 0.10000000000000000555, which is a footnote in most projects and a problem in one whose entire output is a comparison against a tolerance.",
+      "$ref": "#/$defs/decimal"
+    },
+    "unit": {
+      "description": "What `expected` is in. Required, and there is no default, because a bare number is the shape of mistake this pair exists to make impossible.",
+      "type": "string",
+      "minLength": 1
+    },
+    "tolerance": {
+      "description": "The half-width of the band inside which a computed result counts as agreeing. Its sign is checked by the validator rather than here: JSON Schema's numeric keywords do not apply to strings.",
+      "$ref": "#/$defs/decimal"
+    },
+    "tolerance_kind": {
+      "description": "What the band in `tolerance` is measured in. A bare number with no kind is the mistake this field pair exists to make impossible.",
+      "enum": ["absolute", "relative", "percent"]
+    },
+    "standard": {
+      "$ref": "#/$defs/standard"
+    },
+    "provenance": {
+      "description": "Where the expected value came from. Decision record 0004 says how a failure under each of these should be read, and the four differ enough that reading a failure without knowing which one applies is guessing.",
+      "enum": [
+        "generated-by-definition",
+        "standard-clause",
+        "published-paper",
+        "implementation-consensus"
+      ]
+    }
+  },
+  "$defs": {
+    "decimal": {
+      "description": "A number written as text, so that it survives every parser unchanged and is converted deliberately, once, by whoever consumes it.",
+      "type": "string",
+      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]+)?([eE][-+]?[0-9]+)?$"
+    },
+    "field_name": {
+      "description": "Lowercase with underscores, never a hyphen and never a leading digit. MATLAB's jsondecode maps object keys onto struct field names and rewrites any key that is not a valid MATLAB identifier, so a hyphenated key arrives under a different name in one of the three consumers this format exists for.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "fade": {
+      "description": "The onset and offset shaping. A sinusoid that starts at a non-zero sample is a click, and a click is broadband energy the metric will see, so the fade is part of the stimulus rather than a detail of how it was written out. The permitted shapes belong to the generator issue and are not enumerated here; an unknown shape is refused by the generator and not by this schema.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shape", "duration_seconds"],
+      "properties": {
+        "shape": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_]*$"
+        },
+        "duration_seconds": {
+          "$ref": "#/$defs/decimal"
+        }
+      }
+    },
+    "standard": {
+      "description": "What pins the expectation to a document. Decision record 0008 owns what these fields mean and what happens when the document is revised. The document itself is never redistributed and never enters this tree.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["designation", "part", "edition_year", "clause"],
+      "properties": {
+        "designation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "part": {
+          "type": "string",
+          "minLength": 1
+        },
+        "edition_year": {
+          "type": "integer",
+          "minimum": 1900
+        },
+        "clause": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "signal": {
+      "description": "The stimulus, described completely enough to regenerate it byte for byte. `parameters` is closed per kind, so a fixture written against a generator feature that was renamed is refused instead of being generated with the parameter silently ignored.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "sample_rate",
+        "channels",
+        "duration_seconds",
+        "parameters"
+      ],
+      "properties": {
+        "kind": {
+          "description": "Which generator produces this signal. A kind is added by the issue that builds its generator, together with the closed parameter set below. Adding one makes no fixture that is valid today invalid, so it does not raise the schema version.",
+          "enum": ["sinusoid", "amplitude_modulated_sinusoid"]
+        },
+        "sample_rate": {
+          "description": "In hertz. A count, so it stays a JSON number: it is an exact integer and nothing is lost.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "channels": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "bit_depth": {
+          "description": "Optional. Where it is present the generator writes integer samples, scaling by the largest positive value the depth holds, which for sixteen bits is 32767 and not 32768. Where it is absent the samples are floating point in the range minus one to plus one.",
+          "type": "integer",
+          "minimum": 8
+        },
+        "duration_seconds": {
+          "$ref": "#/$defs/decimal"
+        },
+        "parameters": {
+          "type": "object",
+          "propertyNames": {
+            "$ref": "#/$defs/field_name"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "sinusoid"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "parameters": {
+                "$ref": "#/$defs/sinusoid_parameters"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "amplitude_modulated_sinusoid"
+              }
+            },
+            "required": ["kind"]
+          },
+          "then": {
+            "properties": {
+              "parameters": {
+                "$ref": "#/$defs/amplitude_modulated_sinusoid_parameters"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "sinusoid_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frequency_hz",
+        "level_db_spl",
+        "calibration_reference_db_spl",
+        "fade"
+      ],
+      "properties": {
+        "frequency_hz": {
+          "$ref": "#/$defs/decimal"
+        },
+        "level_db_spl": {
+          "description": "The sound pressure level of the produced signal, in decibels relative to twenty micropascals. The level names a root mean square pressure; docs/calibration.md works the mapping to samples through with numbers.",
+          "$ref": "#/$defs/decimal"
+        },
+        "calibration_reference_db_spl": {
+          "description": "The sound pressure level a full-scale sine wave corresponds to, meaning a sinusoid whose peak sample is one and not one whose root mean square is one. The difference between those two readings is 3.01 dB and it would apply to every fixture at once, which is why this is a required field and never a default inside a generator.",
+          "$ref": "#/$defs/decimal"
+        },
+        "fade": {
+          "$ref": "#/$defs/fade"
+        }
+      }
+    },
+    "amplitude_modulated_sinusoid_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "carrier_frequency_hz",
+        "modulation_frequency_hz",
+        "modulation_depth",
+        "level_db_spl",
+        "level_convention",
+        "calibration_reference_db_spl",
+        "fade"
+      ],
+      "properties": {
+        "carrier_frequency_hz": {
+          "$ref": "#/$defs/decimal"
+        },
+        "modulation_frequency_hz": {
+          "$ref": "#/$defs/decimal"
+        },
+        "modulation_depth": {
+          "description": "The depth m of the envelope 1 + m * sin(2 * pi * fm * t). Its range is checked by the generator and not here.",
+          "$ref": "#/$defs/decimal"
+        },
+        "level_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "level_convention": {
+          "description": "Which reading `level_db_spl` means. Modulation changes the root mean square of a carrier, so a fixture saying sixty decibels has to say sixty decibels of what. At full depth the two readings differ by 1.76 dB, and reading it the wrong way round reports every implementation as disagreeing by that much, in the same direction, on exactly the fixtures the roughness and fluctuation strength anchors rest on. Required, with no default, because a default is a convention nobody wrote down.",
+          "enum": ["carrier", "modulated"]
+        },
+        "calibration_reference_db_spl": {
+          "$ref": "#/$defs/decimal"
+        },
+        "fade": {
+          "$ref": "#/$defs/fade"
+        }
+      }
+    }
+  }
+}
