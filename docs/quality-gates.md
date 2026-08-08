@@ -83,6 +83,16 @@ naming the untyped dependency that forces it.
 None of the three runs the test suite. That is a separate command and a separate
 check.
 
+None of the three refuses a tracked audio file. That is a fourth command:
+
+    python tools/refuse_tracked_audio.py
+
+It reads the tracked tree, refuses a path by extension and independently by
+leading bytes, and exits 2 rather than 0 on anything that stops it completing.
+Issue #6 is the decision it enforces and issue #19 is where it was built. Like
+the three above, nothing runs it on a pull request yet; #17 is where it becomes
+a check name.
+
 None of the three is a security review, and the bandit rules in the linter's
 selection are pattern matches over source text rather than an analysis. A rule
 set of this shape is a floor and can be evaded by anyone who wants to.
