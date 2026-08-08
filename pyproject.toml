@@ -40,7 +40,15 @@ requires-python = ">=3.11,<3.15"
 # reference signal, and the run it breaks reports an implementation
 # disagreement, which is a week of somebody's life looking in the wrong place.
 # Issue #16 holds that pin open until there is a version to write.
-dependencies = []
+#
+# The JSON Schema validator is here because a fixture is refused before any code
+# reads it, which is what decision record 0004 asks for. It is bounded below at
+# the release that made the 2020-12 dialect the default and pinned exactly in
+# uv.lock. It is not the pin the paragraph above is about: nothing it does
+# reaches the bytes of a signal.
+dependencies = [
+  "jsonschema>=4.18",
+]
 
 # There is no license declaration here, and its absence is deliberate rather
 # than an omission. The license of this repository is a maintainer decision and
@@ -83,6 +91,11 @@ dev = [
   # than that, and pinning it exactly is issue #16 along with everything else
   # here.
   "pytest>=8.0",
+  # Type stubs for the JSON Schema validator, which ships no py.typed marker.
+  # Stubs rather than a per-module relaxation: a relaxation turns everything the
+  # library touches into Any, and the validator is the one place in this package
+  # where a wrong type reaches a fixture refusal.
+  "types-jsonschema>=4.23",
 ]
 
 [tool.hatch.build.targets.wheel]
