@@ -1,8 +1,24 @@
 # The quality gates and the commands that run them
 
-Three tools, three commands. These are the commands the workflow runs, so a
-green run locally and a green check on a pull request mean the same thing. If
-they ever diverge, the workflow is wrong, not the list below.
+Three tools, three commands. Nothing runs them on a pull request. Five
+workflows exist here and none of them mentions either tool:
+
+    $ git ls-files .github/workflows
+    .github/workflows/dco.yml
+    .github/workflows/dependency-review.yml
+    .github/workflows/scorecard.yml
+    .github/workflows/unicode-guard.yml
+    .github/workflows/zizmor.yml
+
+    $ grep -rl 'ruff\|mypy' .github/workflows/ ; echo "exit=$?"
+    exit=1
+
+So a contributor who does not run the three commands below is refused by
+nothing, and a pull request that fails all three can still be green. Issue #17
+adds the workflow that runs them. When it lands it runs exactly these commands,
+so that a green run locally and a green check on a pull request mean the same
+thing, and if the two ever diverge the workflow is wrong rather than the list
+below. Until then the sentence above is the whole of what a reader may assume.
 
 Install the development tools first. They are declared in the `dev` dependency
 group in `pyproject.toml` and are not part of what an operator installs.
@@ -34,10 +50,23 @@ contributor to learn or to argue with.
 
     mypy
 
-Strict mode over the package and the tests, reading `[tool.mypy]` in
-`pyproject.toml`. The `files` entry there is what makes the bare command cover
-both directories, so the command cannot drift away from the scope it is supposed
-to have.
+Strict mode, reading `[tool.mypy]` in `pyproject.toml`. The `files` entry there
+is the whole of what the bare command covers, so the command cannot drift away
+from the scope it is supposed to have. That scope is the package and nothing
+else:
+
+    $ grep -n '^files' pyproject.toml
+    175:files = ["src"]
+
+    $ git ls-files tests | wc -l
+    0
+
+The tests are outside it because there are none yet. mypy refuses a path that
+does not exist and refuses a directory holding no Python file, so naming
+`tests` today would make the documented command exit 2 on a clean tree. Adding
+it is what issue #14 owes issue #15, and until that is done this command says
+nothing at all about the half of the tree where the assertions will live. A
+type error in a test would not be reported by it.
 
 Strict from the first commit, because strictness is affordable on an empty tree
 and unaffordable on a full one. An import with no type information is an error
