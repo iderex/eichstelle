@@ -70,20 +70,24 @@ The tools, the commands and what each one does and does not cover are in
 second copy of the list here would drift against it, and the one in the wrong
 place would be this one.
 
-There is no single command that runs all of them yet, and nothing runs any of
-them on a pull request. `docs/quality-gates.md` says so in its own words and
-shows the command behind the claim. Issue #15 and issue #17 are where that
-changes.
+There is still no single command that runs all of them locally. On a pull
+request they are run for you, each as its own check, by the `verify` workflow.
+`docs/quality-gates.md` says which commands those checks run and what each one
+does not cover.
 
 ## Running the tests
 
     python -m pytest
 
 That is the whole suite, and it is one invocation with no path or flag, so that
-the workflow issue #17 adds can run the same characters and a green run here
-means what a green check there means. No workflow runs it today. It needs the
-project installed, because the package reads its own version from the installed
-distribution, which is what `uv sync --locked` above does.
+the `verify` workflow runs the same characters and a green run here means what a
+green check there means. It needs the project installed, because the package
+reads its own version from the installed distribution, which is what
+`uv sync --locked` above does.
+
+On a pull request the suite runs once per supported interpreter version, and it
+runs with no outbound network. A test that reaches the internet passes here and
+fails there.
 
 The suite is split into fast in-process tests under `tests/unit` and slower
 end-to-end runs under `tests/e2e`, selected either by that path or by the marker
@@ -95,9 +99,9 @@ directory in `tests/conftest.py` so the two cannot drift apart.
 Not listed here. `docs/ci-checks.md` is the one place that names them, so that
 a check can be added or renamed in one file rather than two.
 
-That file is not written yet. Issue #17 owes it, along with the workflow it
-describes, and until both land the honest answer to "what runs on my pull
-request" is the set of workflows in `.github/workflows`, read directly.
+It carries every check name a pull request produces and what a failure of each
+one means, including the ones that do not come from the gate above. Read it
+before asking why a check is red.
 
 ## Signing your work
 

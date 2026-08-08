@@ -55,10 +55,12 @@ Five of the target's checks have run here since the first commit. That is
 recorded as observed rather than assumed, and the observation is this:
 
     $ git ls-files .github/workflows
+    .github/workflows/codeql.yml
     .github/workflows/dco.yml
     .github/workflows/dependency-review.yml
     .github/workflows/scorecard.yml
     .github/workflows/unicode-guard.yml
+    .github/workflows/verify.yml
     .github/workflows/zizmor.yml
 
     $ gh run list --limit 30 --json name,conclusion --jq '[.[] | .name] | group_by(.) | map({name: .[0], runs: length}) | .[] | "\(.name)\t\(.runs)"'
@@ -73,6 +75,13 @@ executed, which is the part a reader should want. The names in that second
 output are what the runs reported themselves as, quoted as evidence rather than
 restated as a list this document maintains.
 
+Two of the seven files are not among the five. `codeql.yml` is the static
+analysis row of the map below, landed since. `verify.yml` is this repository's
+own gate, which has no single counterpart on the target board and is not a
+parity claim at all. The second output is a count taken on one day and it moves
+with every run, including runs of those two, so re-run it rather than reading it
+as current.
+
 The five, matched by subject: the sign-off gate, dependency review, the
 supply-chain self-audit, the Trojan Source character guard and the
 workflow-security audit. Each has a counterpart file on the target board in the
@@ -85,7 +94,7 @@ reason does not belong in this document.
 
 | The target's check | What it becomes here, and why it deviates | Delivered by |
 | --- | --- | --- |
-| Two target frameworks built and tested | Two interpreter versions, because the risk covered is the same one: a change that works on one runtime and not the other | #17 |
+| Two target frameworks built and tested | Four interpreter versions, because the risk covered is the same one, a change that works on one runtime and not the other, and because this project declares four. The target board builds the two frameworks it claims; `classifiers` here claims 3.11 through 3.14, and a claim no run exercises is the thing this repository refuses everywhere else. Two ends of the range would have been cheaper and would have left two of those four claims unevidenced | #17 |
 | Analyser warnings promoted to errors | The linter and the strict type checker run as gates, because this language has no compiler to promote warnings in, so the refusal has to come from tools run in refusing mode | #15 |
 | Coverage bar on the security-decision surface | Coverage bar on the verdict surface, because the harm model differs: there a wrong answer lets someone in, here it publishes a false finding about somebody's work, so the surface is the comparator, the tolerance evaluation, the verdict mapping, the record writer and the report renderer | #47 |
 | The coverage threshold number | Not copied. The same method is used instead, the bar set just below this project's own first honest measurement, because a number lifted from a project with a different surface is a number nobody chose and nobody will defend | #47 |
@@ -157,10 +166,8 @@ tree refuses to break.
 
 It does not enumerate this repository's checks. `docs/ci-checks.md` is the
 authority for what runs here and what a failure of each one means, so that the
-two cannot drift apart. That file does not exist at this commit: #17 creates it,
-and #17 has not landed. Until it does, the run output quoted above is the only
-derived statement of what actually executes here, and it is a snapshot rather
-than a list anybody maintains.
+two cannot drift apart. It carries the check names; this document carries only
+the issue that owes each row.
 
 It does not claim parity is achieved. Five checks are at parity and the rest are
 rows in a table pointing at open issues. A map is not a gate.
