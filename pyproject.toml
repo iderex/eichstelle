@@ -32,6 +32,14 @@ requires-python = ">=3.11,<3.15"
 # Empty on purpose. Decision record 0002 permits the harness core to depend on
 # NumPy, SciPy and a JSON Schema validator and on nothing else, and none of them
 # is needed yet because nothing here generates a signal or reads a fixture.
+#
+# When NumPy arrives it is pinned exactly rather than bounded, and it is the one
+# entry here where that is not a supply-chain precaution. The bytes NumPy
+# produces are what a reference signal is, and milestone 3 checksums those bytes
+# and stops a run when they move. A floating NumPy is therefore a floating
+# reference signal, and the run it breaks reports an implementation
+# disagreement, which is a week of somebody's life looking in the wrong place.
+# Issue #16 holds that pin open until there is a version to write.
 dependencies = []
 
 # There is no license declaration here, and its absence is deliberate rather
