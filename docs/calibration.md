@@ -13,9 +13,10 @@ fixture is a real finding worth reporting, and it is worthless if the suite
 cannot tell it apart from a model disagreement.
 
 This file fixes both conventions and works each one through with numbers. It
-does not describe a generator: nothing here generates a signal yet. Issue #21
-builds the sinusoid generator and issue #23 the modulated one, and both of them
-are held to what is written here.
+describes what a value means and not how a generator is written.
+`src/eichstelle/signals/generator.py` produces sinusoids and is held to what is
+written here; the modulated generator is issue #23 and is not written yet, so
+the second convention is fixed and unimplemented.
 
 ## The calibration reference
 
@@ -162,12 +163,48 @@ one. Their level is stated under the carrier reading of the convention above.
 The fixtures that carry them are issue #26; what is written here is the meaning
 those fixtures are built against.
 
-## What this does not settle
+## The fade, and what it does to the level
 
-The fade at the onset and the offset. A sinusoid that starts at a non-zero
-sample is a click, and a click is broadband energy the metric will see, so the
-fade shape and duration are part of the stimulus and are stated by the
-description. What the permitted shapes are belongs with the generator in #21.
+A sinusoid that starts at a non-zero sample is a click, and a click is broadband
+energy the metric will see, so the fade shape and duration are part of the
+stimulus and are stated by the description rather than chosen by a generator.
+
+Three shapes, and `src/eichstelle/signals/generator.py` refuses any other:
+
+- `linear` is a straight ramp in amplitude.
+- `raised_cosine` is a half Hann window, continuous in its first derivative at
+  both ends of the ramp, so it spreads less energy away from the tone than a
+  linear ramp of the same duration.
+- `none` applies no shaping. It is the one that can produce a click, because
+  unless the duration holds a whole number of periods the signal stops at a
+  non-zero sample. It is named rather than reached by writing a zero duration,
+  so that a description asking for an unshaped tone has said so.
+
+The gain is zero at the first sample and at the last, one across the sustain,
+and the ramp runs over the stated duration at each end. Writing the position
+through the ramp as `p`, from zero to one, the two shaped forms are `p` and
+`0.5 * (1 - cos(pi * p))`.
+
+The level names the tone, not the faded signal. The amplitude above is the
+amplitude of the sinusoid, the fade is applied on top of it, and the consequence
+is worth stating because it is measurable: the root mean square over the whole
+signal is lower than the requested level, by an amount that depends on the fade,
+and the root mean square over the sustain is the requested level.
+
+    $ python -m pytest tests/unit/test_signal_generator.py -q -k level
+    4 passed, 35 deselected
+
+The alternative reading would have the level name the produced signal including
+its fades. It is rejected because it makes the tone's amplitude depend on the
+fade duration, so adjusting a fade would put a different tone in front of an
+implementation and every result on that fixture would move for a reason nobody
+recorded.
+
+A sinusoid here starts at phase zero. The schema carries no phase field for this
+kind and the generator supplies none, which is why the first sample is zero
+before any fade is applied.
+
+## What this does not settle
 
 The sample rate and the duration, which are explicit fields for their own
 reasons and are not conventions anyone disagrees about.
@@ -177,7 +214,11 @@ authority for what a description looks like. What is fixed here is what the
 values mean, so that the schema can name them and this file does not have to be
 read to know how a field is spelled.
 
-Nothing enforces any of this. There is no generator, no schema and no check that
-reads a description, so a fixture stating a level under the wrong convention
-would be refused by nothing today. Issue #49 is where the invariants in this
-file become rules that refuse.
+Some of this is enforced and the larger half is not. The schema requires the
+calibration reference and the level convention to be present, and the generator
+refuses a sinusoid description that omits the reference, names a fade shape it
+does not produce, or asks for a level that would clip. What nothing refuses is a
+value that is present and wrong: a fixture stating 94.0 where it meant 93.9794,
+or stating the carrier reading where it meant the modulated one, is a fixture
+every route here accepts. Issue #49 is where the invariants in this file become
+rules that refuse, and until it lands the review is what catches a wrong number.
