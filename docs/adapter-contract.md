@@ -1,0 +1,271 @@
+# Writing an adapter
+
+An adapter connects one implementation of a psychoacoustic standard to this
+suite. It is an executable. The harness writes a JSON job to a file, runs your
+executable with the path to that file as its one argument, and reads a JSON
+result from the path the job named.
+
+That is the whole interface. Nothing is imported, no library is loaded into the
+harness, and your implementation's language and runtime are your business. This
+document is written so you can satisfy the contract without reading any of this
+project's source. If you have to read the source to answer a question, the
+question belongs in an issue here, because the answer is missing from this file.
+
+This is protocol version 1.
+
+## The invocation
+
+    <your adapter> <path to the job document>
+
+One argument. Your process starts with its working directory set to the
+directory the job names in `working_directory`. Nothing is written to your
+standard input, and nothing you write to standard output or standard error is
+read as a result; use them for logs.
+
+`tools/fake_adapter.py` in this repository is a complete adapter that computes
+nothing, and it is worth reading beside this document.
+
+## The job document
+
+An object. Every field is required for the kind of job it belongs to; nothing is
+optional and nothing has a default you are expected to know.
+
+| field | type | meaning |
+| --- | --- | --- |
+| `protocol_version` | integer | Always `1` today. If it is a number you do not implement, refuse rather than guess. |
+| `kind` | string | `measure` or `capabilities`. |
+| `result_path` | string | Where you write your result. |
+| `working_directory` | string | A directory the harness made for this invocation and will delete afterwards. Your process starts in it. |
+| `timeout_seconds` | decimal string | The limit the harness will terminate you at. |
+
+A `measure` job also carries:
+
+| field | type | meaning |
+| --- | --- | --- |
+| `fixture_id` | string | Echo it in your result. |
+| `fixture_revision` | integer | Which revision of that fixture this is. |
+| `signal_path` | string | An absolute path to the stimulus, a WAVE file. Read-only, outside your working directory, and the same file every adapter in this run is given. |
+| `sample_rate` | integer | Hertz. Describes the file at `signal_path`. |
+| `channels` | integer | Channel count of that file. |
+| `metric` | string | What to compute. Lowercase with underscores. |
+| `metric_parameters` | object | The arguments that metric takes. Its keys are lowercase with underscores; what they mean is the metric's business. |
+| `standard` | string | The document designation, for example `ISO 532`. |
+| `part` | string | The part, as text, because parts are not always numbers. |
+| `edition` | integer | The edition year the answer is expected to be against. |
+
+A `capabilities` job carries none of the fixture or signal fields. It is not
+about a stimulus.
+
+The schema is `src/eichstelle/schema/adapter-job-1.schema.json` and it is the
+authority for the shape. Validate against it while you are developing; it will
+tell you what a hand-built job is missing faster than this table will.
+
+## Why the numbers are strings
+
+`timeout_seconds` is a string, and so is every value you return. JSON numbers
+are IEEE 754 doubles in every parser this contract has to cross, and this suite's
+entire output is a comparison against a tolerance. A decimal string survives
+every parser unchanged and is converted deliberately, once, by whoever consumes
+it. Counts stay numbers, because they are exact integers and nothing is lost.
+
+## The result document
+
+Write it to `result_path`. An object.
+
+| field | type | meaning |
+| --- | --- | --- |
+| `protocol_version` | integer | Echo `1`. |
+| `status` | string | `ok`, `unsupported` or `error`. |
+| `diagnostic` | string | Free text for a human reading a failure. Required, may be empty. Nothing branches on it. |
+| `fixture_id` | string | Echo the job's, so a result written to the wrong path is caught rather than misattributed. Required when `status` is `ok`. |
+| `values` | array of decimal strings | Your answer. Required and non-empty when `status` is `ok`, and empty when it is not. |
+| `unit` | string | What the values are in. Required when `status` is `ok`. |
+| `edition` | integer | The edition you actually answered against. Required when `status` is `ok`. |
+| `capabilities` | array | Only on the answer to a `capabilities` job. See below. |
+
+`values` is a list and not a single number because a time-varying metric answers
+with a series. Answer with a one-element list for a scalar metric. A contract
+that starts scalar acquires a second shape later, and this one does not.
+
+`edition` is not decoration and it is not the job's field echoed back. Say which
+edition you actually computed. An implementation answering a 2017 request with a
+2025 model is a real and defensible thing to do, and a report that shows the
+disagreement without showing that is a false finding about somebody's software.
+
+The schema is `src/eichstelle/schema/adapter-result-1.schema.json`.
+
+### The three statuses you may write
+
+`ok` means you computed the metric and `values` is the answer.
+
+`unsupported` means you do not claim this metric, or you do not claim this
+edition of it, and you are declining rather than failing.
+
+`error` means you tried and could not, and `diagnostic` says why.
+
+You may not write anything else. Four further outcomes exist and the harness
+records them itself, because in each case there is no statement of yours worth
+trusting: `timeout` when you ran past your limit, `crashed` when you exited
+non-zero without leaving a well-formed result, `no_result` when you exited
+cleanly and wrote nothing, and `malformed_result` when what you wrote does not
+validate.
+
+Keeping `unsupported` and `error` apart is the point of having both. An
+implementation that never claimed to compute roughness is not failing to compute
+roughness, and a report that says otherwise manufactures a disagreement out of
+nothing.
+
+## Exit codes
+
+Exit `0` when you wrote a result, whatever its status. A declined measurement is
+a successful invocation: you did what you were asked and the answer is that you
+do not claim it.
+
+Exit non-zero when you could not get far enough to write anything, including
+when the job names a protocol version you do not implement. The harness records
+`crashed` and reports the code.
+
+The harness reads the result file, not the exit code, for anything about the
+measurement. An exit code alone tells it nothing it can attribute to a fixture.
+
+## The timeout
+
+The harness terminates you and your children at `timeout_seconds` and records
+`timeout` for that fixture. The run continues. Nothing about the rest of it is
+lost, and it is never an exception that ends the run.
+
+The number is in the job so you can give up early and write an `error` result
+with a useful diagnostic, which is more informative than being killed. You are
+not obliged to.
+
+## The working directory and what you may not do
+
+The harness makes a fresh directory for each invocation, names it in the job,
+starts you in it, and deletes it afterwards. Inside it you may do as you like.
+
+Three prohibitions, and they are short because they are absolute.
+
+You do not write outside your working directory, except to `result_path`. The
+stimulus at `signal_path` is outside it and is read-only, and it is the same file
+handed to every adapter in the run, so writing to it would turn a disagreement
+between implementations into a disagreement about bytes.
+
+You do not open a network connection. Decision record 0010 is where that comes
+from, and the intent is that this suite runs where there is no outbound network
+at all, so an adapter needing one would not work there.
+
+You do not require a display. The same reason: nothing is guaranteed to have one.
+
+None of these is enforced today, and neither is the environment they describe.
+Record 0010 says of itself that until issues #49 and #52 land it is prose, and no
+workflow in this repository runs the suite with the network denied:
+
+    grep -rn -i network .github/workflows/ ; echo "exit=$?"
+    exit=1
+
+So an adapter that opens a socket will not be caught here. These are the
+contract, and breaking them is a defect in that adapter rather than something
+this project detects for you.
+
+## Capabilities
+
+A job with `kind` set to `capabilities` carries no fixture and no signal. Answer
+with a result whose `capabilities` field lists the metrics you claim and, per
+metric, the editions you claim.
+
+```json
+{
+  "protocol_version": 1,
+  "status": "ok",
+  "capabilities": [
+    { "metric": "loudness", "editions": [2017] },
+    { "metric": "sharpness", "editions": [2009, 2017] }
+  ],
+  "diagnostic": ""
+}
+```
+
+The harness reads that once per run and reports a metric you do not claim as
+`unsupported` without invoking you for it. That is why the declaration exists as
+a mechanism rather than as documentation.
+
+It travels through the same job and result files as a measurement, so you
+implement one contract and not two, and your declaration is validated the same
+way your answers are.
+
+What the harness does with the declaration is issue #34 and is not built. Today
+nothing asks any adapter for its capabilities.
+
+## A complete worked example
+
+The job the harness writes:
+
+```json
+{
+  "protocol_version": 1,
+  "kind": "measure",
+  "fixture_id": "example-tone-at-forty-decibels",
+  "fixture_revision": 1,
+  "signal_path": "/run/eichstelle/signals/example-tone-at-forty-decibels.wav",
+  "sample_rate": 48000,
+  "channels": 1,
+  "metric": "loudness",
+  "metric_parameters": { "field_condition": "free" },
+  "standard": "ISO 532",
+  "part": "1",
+  "edition": 2017,
+  "result_path": "/run/eichstelle/invocations/0001/result.json",
+  "working_directory": "/run/eichstelle/invocations/0001",
+  "timeout_seconds": "120.0"
+}
+```
+
+The result you write to `/run/eichstelle/invocations/0001/result.json`:
+
+```json
+{
+  "protocol_version": 1,
+  "fixture_id": "example-tone-at-forty-decibels",
+  "status": "ok",
+  "values": ["1.02"],
+  "unit": "sone",
+  "edition": 2017,
+  "diagnostic": ""
+}
+```
+
+Declining the same job, because you do not claim that edition:
+
+```json
+{
+  "protocol_version": 1,
+  "fixture_id": "example-tone-at-forty-decibels",
+  "status": "unsupported",
+  "values": [],
+  "diagnostic": "this implementation follows the 2005 edition of ISO 532-1 only"
+}
+```
+
+## Versions, and what happens when this changes
+
+`protocol_version` is an integer and it is `1`. Refuse a job carrying a version
+you do not implement, and exit non-zero. Do not answer it on the assumption that
+the fields you know are still there and still mean the same thing, because that
+assumption is exactly what the field exists to make unnecessary.
+
+A change that would break an adapter written against version 1 raises the
+version. That includes adding a required field, removing one, narrowing what a
+field may contain, and changing what a value means. Adding an optional field
+does not, and neither does adding a new value to a set an adapter is expected to
+handle by ignoring what it does not recognise.
+
+When the version rises, the schema for the old version stays in the tree
+unedited, exactly as it was published, and the harness keeps writing version 1
+jobs to adapters that declare only version 1 for at least one release after the
+new one appears. An adapter author gets a release to move, and finds out by
+reading a changelog rather than by a run failing.
+
+None of that is built. There is one version, there is no negotiation and no
+adapter has ever been run by this project. What is written here is the rule that
+applies when the second version exists, recorded now because deciding it after
+the fact is how a protocol acquires two incompatible dialects.
