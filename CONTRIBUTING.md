@@ -41,6 +41,28 @@ agreement of the implementations themselves. A fixture that does not say cannot
 be told apart from one that made its number up, and a reader has no way back to
 the source.
 
+## Installing, and the lock file
+
+    uv sync --locked
+
+That is the install. Locked mode means uv refuses when `uv.lock` does not match
+what `pyproject.toml` declares, instead of quietly resolving something newer, so
+a green run is a green run of a set of versions somebody recorded. It covers the
+development tools as well as the runtime dependencies, because a linter that
+changes its rules between two runs of the same commit is the same problem in a
+smaller costume.
+
+    uv lock
+
+That is the single command that regenerates the lock. It is run deliberately and
+its diff is read, and there is no scheduled refresh that moves those versions
+without anybody looking at them. Decision record 0002 is where uv was chosen and
+why.
+
+`python -m pip install -e . --group dev` still works for anyone who does not
+want uv, and it resolves freshly every time. Use it if you like, and know that
+what it gives you is not the recorded set.
+
 ## Running the gate locally
 
 The tools, the commands and what each one does and does not cover are in
@@ -61,7 +83,7 @@ That is the whole suite, and it is one invocation with no path or flag, so that
 the workflow issue #17 adds can run the same characters and a green run here
 means what a green check there means. No workflow runs it today. It needs the
 project installed, because the package reads its own version from the installed
-distribution: `python -m pip install -e . --group dev`.
+distribution, which is what `uv sync --locked` above does.
 
 The suite is split into fast in-process tests under `tests/unit` and slower
 end-to-end runs under `tests/e2e`, selected either by that path or by the marker

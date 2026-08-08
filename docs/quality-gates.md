@@ -23,7 +23,13 @@ below. Until then the sentence above is the whole of what a reader may assume.
 Install the development tools first. They are declared in the `dev` dependency
 group in `pyproject.toml` and are not part of what an operator installs.
 
-    python -m pip install -e . --group dev
+    uv sync --locked
+
+Locked mode, so the versions are the ones in `uv.lock` and not whatever resolves
+today. `python -m pip install -e . --group dev` also works and resolves freshly,
+which means two contributors can get two different ruff releases from the same
+commit and see two different results from the same command. `CONTRIBUTING.md`
+says which is which.
 
 ## The linter
 
@@ -109,6 +115,9 @@ None of the three is a security review, and the bandit rules in the linter's
 selection are pattern matches over source text rather than an analysis. A rule
 set of this shape is a floor and can be evaded by anyone who wants to.
 
-A tool version is bounded from below in `pyproject.toml` and not pinned. Two
-contributors on two different ruff releases can therefore see two different
-results from the same command. Issue #16 is where that is closed.
+A tool version is bounded from below in `pyproject.toml` and pinned exactly, with
+a hash, in `uv.lock`. Which of the two a contributor gets depends on which
+install command they ran, and only `uv sync --locked` refuses to move. Nothing
+here obliges anybody to run that one, and no workflow runs either, so a
+contributor on a freshly resolved ruff still sees a different result from the
+same command. Issue #16 stays open on that and on the rest of what it asks for.
