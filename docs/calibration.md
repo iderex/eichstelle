@@ -14,9 +14,9 @@ cannot tell it apart from a model disagreement.
 
 This file fixes both conventions and works each one through with numbers. It
 describes what a value means and not how a generator is written.
-`src/eichstelle/signals/generator.py` produces sinusoids and is held to what is
-written here; the modulated generator is issue #23 and is not written yet, so
-the second convention is fixed and unimplemented.
+`src/eichstelle/signals/generator.py` produces the sinusoid, the
+amplitude-modulated sinusoid and the frequency-modulated sinusoid, and is held
+to what is written here.
 
 ## The calibration reference
 
@@ -146,6 +146,29 @@ interpret a fixture is a reader who can get it wrong, and a field that is
 present on one kind of description and absent on another is a schema that has to
 be explained.
 
+What such a description states is a peak deviation in hertz rather than a
+modulation index. The instantaneous frequency runs from the carrier minus the
+deviation to the carrier plus it, and the generator adds
+`(deviation / modulation frequency) * sin(...)` to the carrier phase, which is
+the index. Both spellings are in circulation, and a deviation is the one a
+reader can check against a spectrum without first knowing the modulation
+frequency.
+
+A deviation that takes the instantaneous frequency to or below zero, or to or
+above half the sample rate, is refused. In either case what would be produced is
+not the signal the description names.
+
+### The initial phases
+
+Two optional fields, `carrier_phase_radians` and `modulator_phase_radians`, and
+both are zero where a description says nothing. The default is stated here so
+that a description silent about phase has still named one, rather than
+inheriting whatever the generator that ran happened to do.
+
+It matters for a short signal, where a fraction of a modulation period is a
+large part of the stimulus, and for anything comparing a time series, where the
+whole comparison is against a signal that started somewhere in particular.
+
 ## The reference anchors
 
 Two signals are definitions rather than measurements, which is what makes them
@@ -216,8 +239,8 @@ read to know how a field is spelled.
 
 Some of this is enforced and the larger half is not. The schema requires the
 calibration reference and the level convention to be present, and the generator
-refuses a sinusoid description that omits the reference, names a fade shape it
-does not produce, or asks for a level that would clip. What nothing refuses is a
+refuses a description that omits the reference or the convention, names a fade
+shape it does not produce, or asks for a level that would clip. What nothing refuses is a
 value that is present and wrong: a fixture stating 94.0 where it meant 93.9794,
 or stating the carrier reading where it meant the modulated one, is a fixture
 every route here accepts. Issue #49 is where the invariants in this file become

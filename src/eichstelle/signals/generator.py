@@ -370,3 +370,273 @@ def write_wave(path: Path, signal: Sinusoid) -> Path:
         handle.setframerate(signal.sample_rate)
         handle.writeframes(frames)
     return path
+
+
+# The modulated kinds, and what `level_db_spl` can mean on one. Both spellings
+# are the schema's. `docs/calibration.md` derives the difference between the two
+# readings and why a default would be a convention nobody wrote down.
+AMPLITUDE_MODULATED: Final = "amplitude_modulated_sinusoid"
+FREQUENCY_MODULATED: Final = "frequency_modulated_sinusoid"
+LEVEL_CONVENTIONS: Final = ("carrier", "modulated")
+
+# The initial phases, when a description says nothing. Stated here and in
+# `docs/calibration.md` rather than left implied, because a stimulus that starts
+# somewhere else in its envelope is a different stimulus for a short signal and
+# for anything comparing a time series.
+DEFAULT_PHASE: Final = 0.0
+
+
+@dataclass(frozen=True)
+class Modulated:
+    """A modulated description that has been checked and converted.
+
+    One class for both kinds. `modulation_depth` is set on the amplitude kind
+    and `frequency_deviation_hz` on the frequency kind, and exactly one of the
+    two is not None, which is what `parse_modulated` guarantees.
+    """
+
+    kind: str
+    carrier_frequency_hz: float
+    modulation_frequency_hz: float
+    modulation_depth: float | None
+    frequency_deviation_hz: float | None
+    carrier_phase_radians: float
+    modulator_phase_radians: float
+    level_db_spl: float
+    level_convention: str
+    calibration_reference_db_spl: float
+    sample_rate: int
+    channels: int
+    duration_seconds: float
+    bit_depth: int | None
+    fade: Fade
+
+    @property
+    def frame_count(self) -> int:
+        """How many samples per channel the signal holds."""
+        return round(self.duration_seconds * self.sample_rate)
+
+    @property
+    def fade_frames(self) -> int:
+        """How many samples each of the two fades covers."""
+        if self.fade.shape == "none":
+            return 0
+        return round(self.fade.duration_seconds * self.sample_rate)
+
+    @property
+    def modulation_gain(self) -> float:
+        """How much louder the modulated signal is than its carrier, as a ratio.
+
+        For an envelope of `1 + m * sin(...)` the mean square picks up a term in
+        `m ** 2 / 2`, so the two readings of a level differ by
+        `10 * log10(1 + m ** 2 / 2)` decibels, which is 1.760913 dB at full
+        depth. A frequency-modulated sinusoid has a constant envelope, so the
+        ratio is one and the two readings coincide.
+        """
+        if self.modulation_depth is None:
+            return 1.0
+        return math.sqrt(1.0 + self.modulation_depth**2 / 2.0)
+
+    @property
+    def carrier_amplitude(self) -> float:
+        """The peak sample of the carrier, before the envelope is applied.
+
+        Under the carrier reading the level names the unmodulated carrier, so
+        this is what the level maps to directly. Under the modulated reading the
+        level names the produced signal, so the carrier is quieter by exactly
+        the ratio above. Taking this the wrong way round reports every
+        implementation as disagreeing by 1.76 dB in the same direction.
+        """
+        full = 10 ** ((self.level_db_spl - self.calibration_reference_db_spl) / 20)
+        if self.level_convention == "carrier":
+            return full
+        return full / self.modulation_gain
+
+    @property
+    def peak_amplitude(self) -> float:
+        """The largest sample the signal reaches, envelope included."""
+        if self.modulation_depth is None:
+            return self.carrier_amplitude
+        return self.carrier_amplitude * (1.0 + self.modulation_depth)
+
+
+def parse_modulated(description: Mapping[str, object]) -> Modulated:
+    """Check a `signal` object of a modulated kind and convert its fields."""
+    where = "signal"
+    kind = description.get("kind")
+    if kind not in (AMPLITUDE_MODULATED, FREQUENCY_MODULATED):
+        raise DescriptionError(
+            f"{where}: kind is {kind!r} and this generator renders "
+            f"{AMPLITUDE_MODULATED!r} and {FREQUENCY_MODULATED!r}"
+        )
+
+    sample_rate = _integer(description, "sample_rate", where)
+    if sample_rate < 1:
+        raise DescriptionError(f"{where}: sample_rate is {sample_rate}")
+    channels = _integer(description, "channels", where)
+    if channels < 1:
+        raise DescriptionError(f"{where}: channels is {channels}")
+    duration = _decimal(description, "duration_seconds", where)
+    if duration <= 0:
+        raise DescriptionError(f"{where}: duration_seconds is {duration}")
+
+    bit_depth: int | None = None
+    if "bit_depth" in description:
+        bit_depth = _integer(description, "bit_depth", where)
+        if bit_depth not in INTEGER_DEPTHS:
+            implemented = ", ".join(str(depth) for depth in INTEGER_DEPTHS)
+            raise DescriptionError(
+                f"{where}: bit_depth {bit_depth} is not one this generator writes. "
+                f"Implemented: {implemented}"
+            )
+
+    parameters = description.get("parameters")
+    if not isinstance(parameters, Mapping):
+        raise DescriptionError(f"{where}: no parameters object")
+    inside = f"{where}.parameters"
+
+    carrier = _decimal(parameters, "carrier_frequency_hz", inside)
+    if carrier <= 0:
+        raise DescriptionError(f"{inside}: carrier_frequency_hz is {carrier}")
+    if 2 * carrier >= sample_rate:
+        raise DescriptionError(
+            f"{inside}: carrier_frequency_hz {carrier} is at or above half the "
+            f"sample rate {sample_rate}, so what would be generated is an alias"
+        )
+    modulator = _decimal(parameters, "modulation_frequency_hz", inside)
+    if modulator <= 0:
+        raise DescriptionError(f"{inside}: modulation_frequency_hz is {modulator}")
+
+    depth: float | None = None
+    deviation: float | None = None
+    if kind == AMPLITUDE_MODULATED:
+        depth = _decimal(parameters, "modulation_depth", inside)
+        if not 0 <= depth <= 1:
+            raise DescriptionError(
+                f"{inside}: modulation_depth is {depth}, and the envelope "
+                "1 + m * sin(...) goes negative above one, which inverts the "
+                "carrier rather than modulating it"
+            )
+    else:
+        deviation = _decimal(parameters, "frequency_deviation_hz", inside)
+        if deviation <= 0:
+            raise DescriptionError(f"{inside}: frequency_deviation_hz is {deviation}")
+        if carrier - deviation <= 0:
+            raise DescriptionError(
+                f"{inside}: frequency_deviation_hz {deviation} takes the "
+                f"instantaneous frequency of a {carrier} Hz carrier to or below "
+                "zero, which is a different signal from the one described"
+            )
+        if 2 * (carrier + deviation) >= sample_rate:
+            raise DescriptionError(
+                f"{inside}: the instantaneous frequency reaches "
+                f"{carrier + deviation} Hz, which is at or above half the sample "
+                f"rate {sample_rate}, so part of the sweep would alias"
+            )
+
+    level = _decimal(parameters, "level_db_spl", inside)
+
+    # The two refusals this issue names. Each carries a sentence of its own, so
+    # a test can tell it from the generic missing-field message.
+    if "level_convention" not in parameters:
+        permitted = ", ".join(LEVEL_CONVENTIONS)
+        raise DescriptionError(
+            f"{inside}: no level_convention. Modulation changes the root mean "
+            "square of a carrier, so a level on a modulated signal has to say "
+            "which reading it is, and this generator has no default for it. "
+            f"Permitted: {permitted}"
+        )
+    convention = parameters["level_convention"]
+    if convention not in LEVEL_CONVENTIONS:
+        permitted = ", ".join(LEVEL_CONVENTIONS)
+        raise DescriptionError(
+            f"{inside}: level_convention {convention!r} is not one this generator "
+            f"reads. Permitted: {permitted}"
+        )
+    if "calibration_reference_db_spl" not in parameters:
+        raise DescriptionError(
+            f"{inside}: no calibration_reference_db_spl. The level of a full-scale "
+            "sine wave is what makes a level in decibels mean a pressure, and this "
+            "generator has no default for it. docs/calibration.md says what the "
+            "field means"
+        )
+    reference = _decimal(parameters, "calibration_reference_db_spl", inside)
+
+    signal = Modulated(
+        kind=str(kind),
+        carrier_frequency_hz=carrier,
+        modulation_frequency_hz=modulator,
+        modulation_depth=depth,
+        frequency_deviation_hz=deviation,
+        carrier_phase_radians=(
+            _decimal(parameters, "carrier_phase_radians", inside)
+            if "carrier_phase_radians" in parameters
+            else DEFAULT_PHASE
+        ),
+        modulator_phase_radians=(
+            _decimal(parameters, "modulator_phase_radians", inside)
+            if "modulator_phase_radians" in parameters
+            else DEFAULT_PHASE
+        ),
+        level_db_spl=level,
+        level_convention=str(convention),
+        calibration_reference_db_spl=reference,
+        sample_rate=sample_rate,
+        channels=channels,
+        duration_seconds=duration,
+        bit_depth=bit_depth,
+        fade=_fade(parameters, inside),
+    )
+
+    if signal.frame_count < 1:
+        raise DescriptionError(
+            f"{where}: duration_seconds {duration} at sample_rate {sample_rate} "
+            "is less than one sample"
+        )
+    if 2 * signal.fade_frames > signal.frame_count:
+        raise DescriptionError(
+            f"{inside}.fade: two fades of {signal.fade_frames} samples do not fit "
+            f"in {signal.frame_count} samples"
+        )
+    if signal.peak_amplitude > 1:
+        raise DescriptionError(
+            f"{inside}: the envelope peaks at {signal.peak_amplitude:.6f} of full "
+            "scale and would clip. On an amplitude-modulated signal the peak is "
+            "the carrier times one plus the depth, so a level that fits an "
+            "unmodulated tone can still clip once it is modulated"
+        )
+    return signal
+
+
+def render_modulated(signal: Modulated) -> list[float]:
+    """The samples of a modulated signal, interleaved by channel.
+
+    Amplitude modulation multiplies the carrier by `1 + m * sin(...)`. Frequency
+    modulation adds `(deviation / modulation frequency) * sin(...)` to the
+    carrier phase, which is the modulation index; that leaves the envelope
+    constant, and a constant envelope is why the two level readings coincide on
+    it.
+    """
+    frames = signal.frame_count
+    fade_frames = signal.fade_frames
+    amplitude = signal.carrier_amplitude
+    carrier_step = 2.0 * math.pi * signal.carrier_frequency_hz / signal.sample_rate
+    modulator_step = 2.0 * math.pi * signal.modulation_frequency_hz / signal.sample_rate
+    index_ratio = (
+        0.0
+        if signal.frequency_deviation_hz is None
+        else signal.frequency_deviation_hz / signal.modulation_frequency_hz
+    )
+
+    samples: list[float] = []
+    for index in range(frames):
+        modulator = math.sin(modulator_step * index + signal.modulator_phase_radians)
+        phase = carrier_step * index + signal.carrier_phase_radians
+        if signal.modulation_depth is None:
+            value = amplitude * math.sin(phase + index_ratio * modulator)
+        else:
+            envelope = 1.0 + signal.modulation_depth * modulator
+            value = amplitude * envelope * math.sin(phase)
+        value *= _gain(index, frames, fade_frames, signal.fade.shape)
+        samples.extend([value] * signal.channels)
+    return samples
