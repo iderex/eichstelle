@@ -194,6 +194,7 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "coverage" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "ruff" },
@@ -208,6 +209,7 @@ requires-dist = [{ name = "jsonschema", specifier = ">=4.18" }]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "coverage", specifier = ">=7.15" },
     { name = "mypy", specifier = ">=1.14" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "ruff", specifier = ">=0.14" },

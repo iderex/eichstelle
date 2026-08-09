@@ -18,9 +18,12 @@ __pycache__/
 .hypothesis/
 .tox/
 
-# Coverage output.
+# Coverage output. `coverage.json` is what the verdict-surface bar in issue #47
+# reads, and it is a measurement of one run rather than a fact about the tree,
+# so a tracked copy would be a number that stopped moving.
 .coverage
 .coverage.*
+coverage.json
 coverage.xml
 htmlcov/
 

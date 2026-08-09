@@ -137,6 +137,32 @@ left to the schedule. And it covers the verdict surface rather than the package;
 `[tool.mutmut]` in `pyproject.toml` names what is mutated and why the generators
 are outside it.
 
+None of them is a coverage bar, and that one is a gate. It is a seventh command,
+in three parts because the measurement and the judgement are separate things:
+
+    python -m coverage run --source=src/eichstelle -m pytest
+    python -m coverage json -o coverage.json
+    python tools/coverage_gate.py coverage.json
+
+`coverage` is in the `dev` group, so `uv sync --locked` installs it and a
+contributor sees the same number the check does. The last command is the one
+whose exit code is the gate: 0 at or above the threshold, 1 below it, and 2 when
+the measurement could not be read at all. Issue #47 is where the shape is argued
+and `docs/quality-parity.md` is where it is matched against the target board.
+
+What it bars is the verdict surface rather than the tree, and the surface, the
+exclusions and the reason for each are in `tools/coverage_gate.py` where the
+code that reads them is. The whole-repository number is printed and never
+enforced, because a bar over everything is satisfied by covering the easy parts.
+
+Three things it does not do. It does not follow a subprocess, so the end-to-end
+runs that invoke an adapter through a process boundary contribute nothing to the
+number, which makes the measurement an understatement rather than an
+overstatement. It does not assert the offline promise: this measurement runs
+with ordinary network access and the `tests` legs are where that claim is
+checked. And a line that ran is not a line anything would have noticed being
+wrong, which is the second question and is the mutation run's above.
+
 A tool version is bounded from below in `pyproject.toml` and pinned exactly, with
 a hash, in `uv.lock`. Which of the two a contributor gets depends on which
 install command they ran, and only `uv sync --locked` refuses to move. The

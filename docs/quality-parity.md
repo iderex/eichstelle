@@ -169,8 +169,11 @@ authority for what runs here and what a failure of each one means, so that the
 two cannot drift apart. It carries the check names; this document carries only
 the issue that owes each row.
 
-It does not claim parity is achieved. Five checks are at parity and the rest are
-rows in a table pointing at open issues. A map is not a gate.
+It does not claim parity is achieved. Five checks were at parity when this was
+written, and every other row points at the issue that owes it or that has since
+delivered it. Which of those two a row is in cannot be read off this table, and
+`docs/ci-checks.md` is where the checks that actually run are named. A map is
+not a gate.
 
 It does not verify the target board's internals. What was read from that board
 is its visibility, its head commit and the names of its workflow files, by the
