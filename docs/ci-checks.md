@@ -52,6 +52,31 @@ access, because it has to fetch the locked set. Everything after it is sealed.
 Nothing checks whether the suite would have needed the network, only that it did
 not get it.
 
+**`coverage`** measures the suite once, on the declared interpreter floor, and
+judges the verdict surface against the threshold in `tools/coverage_gate.py`. A
+failure is either the surface covered below that threshold, or a measurement the
+gate could not read.
+
+The second kind is worth telling apart from the first, and the gate's exit code
+does: exit 1 is coverage below the bar, exit 2 is a report that is absent, a
+report that cannot be parsed, a surface module the report does not mention, a
+surface holding no executable line, or a module in the package that is on
+neither the surface nor the exclusion list. All of those are a gate that has
+stopped measuring what it claims to measure, and a gate in that state reporting
+green is worse than no gate at all.
+
+Which modules are on the surface, which are outside it and the reason for each
+are in `tools/coverage_gate.py`, next to the code that reads them, rather than
+here. Counting is per executable line across the whole surface, so one large
+uncovered module cannot hide behind several small covered ones.
+
+What it does not cover: the whole-repository number, which the gate prints and
+never enforces; the modules named as exclusions, for the reasons written beside
+them; and the parts of a run that happen in a subprocess, which coverage does
+not follow into and which therefore make the number an understatement rather
+than an overstatement. This job also runs the suite with ordinary network
+access, so the offline promise is the `tests` legs' and not this one's.
+
 **`fixtures`** validates every tracked fixture under `fixtures/` against the
 schema, using `python -m eichstelle.fixtures`. A failure is a fixture the
 validator refuses, which `docs/fixtures.md` lists by kind, or a run that could
@@ -128,10 +153,15 @@ number.
 
 ## What none of them do
 
-None of them is a coverage bar, a mutation score or a fuzzing run.
-`docs/quality-parity.md` is the map of what is still owed and which issue owes
-it. The mutation score exists as of #48 and is not on this list because nothing
-it does reaches a pull request.
+None of them is a mutation score or a fuzzing run. `docs/quality-parity.md` is
+the map of what is still owed and which issue owes it. The mutation score exists
+as of #48 and is not on this list because nothing it does reaches a pull
+request.
+
+The coverage bar was on this paragraph until #47 landed and is now a check of
+its own above. It bars one surface and reports the rest, so a green `coverage`
+says the verdict surface is covered to the threshold and says nothing at all
+about the modules named as exclusions.
 
 None of them measures anything about acoustics. `README.md` says what a green
 result from this suite does and does not mean, and none of the checks above is

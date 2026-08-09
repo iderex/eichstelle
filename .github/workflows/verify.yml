@@ -6,8 +6,10 @@
 # status check is matched by the literal name of the check run, and a check run
 # takes its name from a job's `name` field, falling back to the job id when none
 # is set. Renaming a job therefore detaches it from whatever required it,
-# silently. The four names below are chosen once and `docs/ci-checks.md` says
-# what a failure of each one means. The dependency-review workflow in this
+# silently. Every name below is chosen once and `docs/ci-checks.md` says what a
+# failure of each one means. No count of them appears here, because a count in a
+# comment goes stale the first time a job is added and the stale number is the
+# one a reader trusts. The dependency-review workflow in this
 # repository deliberately carries no `name` on its job for the same reason, and
 # nothing here touches it.
 #
@@ -182,6 +184,58 @@ jobs:
             # HOME is set explicitly because sudo reset it to root.
             exec runuser -u runner -- env HOME=/home/runner ./.venv/bin/python -m pytest
           '
+
+  coverage:
+    # The coverage bar on the verdict surface, issue #47. Which modules are on
+    # that surface, which are deliberately outside it and why is in
+    # `tools/coverage_gate.py` rather than here, so the answer sits next to the
+    # code that reads it and a reviewer sees the reason in the same diff as the
+    # decision.
+    #
+    # One leg rather than four. The bar is one number about one surface, and a
+    # number measured four times on four interpreters is four numbers somebody
+    # then has to reconcile. The leg is the declared floor, so a line reachable
+    # only through newer syntax cannot inflate it.
+    #
+    # This job runs the suite with ordinary network access, unlike the tests
+    # job above. That is deliberate and it is not a second promise weakening the
+    # first: the offline claim is asserted once, in the job whose name is
+    # `tests`, and this one measures which lines ran. A job that asserted it
+    # again would be a second thing to keep in step with the first.
+    name: coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set
+        run: uv sync --locked --python 3.11
+
+      - name: Measure the suite
+        # `--source` names the package rather than letting coverage infer a
+        # scope from what happened to be imported. An inferred scope shrinks
+        # when a module stops being imported, and a surface that shrinks is
+        # exactly what the gate below refuses to be told nothing about.
+        run: |
+          set -euo pipefail
+          .venv/bin/python -m coverage run --source=src/eichstelle -m pytest
+          .venv/bin/python -m coverage json -o coverage.json
+
+      - name: Judge the verdict surface
+        # Exit 1 is coverage below the bar and exit 2 is a measurement that
+        # could not be read, and both fail this job. The second is the one worth
+        # naming: a missing report, an unparsable report or a surface that
+        # matched no line at all is a gate that has stopped working, and a gate
+        # that has stopped working and reports green is worse than no gate.
+        run: .venv/bin/python tools/coverage_gate.py coverage.json
 
   fixtures:
     # Every fixture against the schema, and the signal checksums. Both halves

@@ -96,6 +96,18 @@ dev = [
   # library touches into Any, and the validator is the one place in this package
   # where a wrong type reaches a fixture refusal.
   "types-jsonschema>=4.23",
+  # The coverage measurement behind the verdict-surface bar in issue #47. It is
+  # in `dev` rather than in its own group because the bar runs on every pull
+  # request, unlike the mutation score, and a contributor has to be able to see
+  # the same number locally that the gate refuses on.
+  #
+  # The floor is the 7.x line, which is what `uv.lock` already resolved for the
+  # mutation group before this entry existed, so the two groups install one
+  # coverage rather than two and the gate is read against a version this tree
+  # has already carried. `tools/coverage_gate.py` reads the JSON report's
+  # per-file `summary.covered_lines` and `summary.num_statements`, and refuses a
+  # report it cannot find those in rather than treating the absence as zero.
+  "coverage>=7.15",
 ]
 
 # The mutation tester, in its own group rather than in `dev`. `uv sync --locked`
