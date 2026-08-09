@@ -6,6 +6,11 @@ Planning happens on the issue tracker first. Every decision that shapes
 the architecture is written down there with its reasons before the code
 that depends on it exists.
 
+Audio you run through this suite stays on your machine. Nothing leaves it unless
+you publish it deliberately, and [docs/privacy.md](docs/privacy.md) is where
+that is written out for somebody who has to answer for it, including which parts
+of it a test checks and which parts are a rule people follow.
+
 ## What this project does not claim
 
 This project certifies nothing. A green result says that an implementation
