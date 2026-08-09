@@ -31,6 +31,12 @@ htmlcov/
 venv/
 env/
 
+# The mutation tester's working copy. It writes a whole second checkout of the
+# package under this directory, with one mutant switched on per run, plus its
+# own caches and stats beside it. None of it is the project and a tracked copy
+# of it would be a tree that drifts against the one it was copied from.
+/mutants/
+
 # Generated stimuli. Decision record 0006 has the harness write signals into a
 # working directory it owns, and issue #6 decides that no audio is committed
 # here at all. Issue #19 is the check that refuses one. This entry is a

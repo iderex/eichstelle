@@ -98,6 +98,22 @@ dev = [
   "types-jsonschema>=4.23",
 ]
 
+# The mutation tester, in its own group rather than in `dev`. `uv sync --locked`
+# installs `dev` and nothing else, so every contributor and every job in the
+# gate would otherwise install a tool none of them runs: the mutation run is
+# scheduled and slow and issue #48 deliberately keeps it off the pull-request
+# path. The scheduled workflow asks for this group by name.
+#
+# Pinned exactly rather than bounded, and this is the one entry in this file
+# where the reason is not supply-chain hygiene. A mutation score is a number
+# about the suite, and a mutation tester that changed which mutants it generates
+# between two runs of the same commit would move that number for a reason that
+# is not about the suite at all. `uv.lock` pins it too; the exact pin here is so
+# that a reader of this file can see the version the number belongs to.
+mutation = [
+  "mutmut==3.7.0",
+]
+
 [tool.hatch.build.targets.wheel]
 # Stated rather than inferred: the wheel carries exactly this package from
 # exactly this directory. An inferred layout is the thing that quietly stops
@@ -283,3 +299,59 @@ markers = [
   "unit: fast, in-process, touches no subprocess and no file outside tmp_path",
   "e2e: end to end through a real entry point, allowed to be slow",
 ]
+
+# ---------------------------------------------------------------------------
+# The mutation tester (mutmut)
+# ---------------------------------------------------------------------------
+
+[tool.mutmut]
+# Line coverage says a line ran. It does not say anything would have noticed if
+# the line had been wrong. This is the tool that asks the second question, by
+# changing the code and seeing whether a test fails. It is scored and reported
+# and it gates nothing; issue #48 is where that posture is argued and
+# `docs/quality-parity.md` is where it is matched against the target board.
+
+# The whole package is copied so that it still imports, and only the verdict
+# surface is mutated. mutmut puts a copy of everything under `source_paths` into
+# `mutants/` and inserts that copy ahead of the real one on the import path, so
+# a module left out of `only_mutate` below is copied unchanged rather than
+# missing.
+source_paths = ["src"]
+
+# The verdict surface, which is the same surface `docs/quality-parity.md` names
+# for the coverage bar in #47: the comparator, the record writer and the report
+# renderer. That is where a mutant that lives is expensive. A surviving mutant
+# in the comparator means a verdict that can be wrong with nothing to notice,
+# and this project's entire output is verdicts.
+#
+# The generators are deliberately outside it. What they produce is checked
+# against `docs/calibration.md` by their own suites, and a mutation run over
+# arithmetic that renders a waveform measures the fixtures rather than the
+# suite. Widening this list is a decision to be argued on an issue, not a
+# convenience.
+only_mutate = [
+  "src/eichstelle/compare/*",
+  "src/eichstelle/record/*",
+  "src/eichstelle/report/*",
+]
+
+# Only the fast half. mutmut runs the tests that cover a mutant, once per
+# mutant, so the end-to-end runs would be paid for hundreds of times over, and a
+# subprocess launched from a mutated module is not what any of them is testing.
+# The unit directory is where the verdict surface is exercised in-process.
+#
+# This is a bound on what the score means and it is worth stating rather than
+# noticing later: a mutant that only the end-to-end runs would have killed is
+# counted here as surviving. That reads the pessimistic way round, which is the
+# right way round for a number about whether anything would notice.
+pytest_add_cli_args_test_selection = ["tests/unit"]
+
+# What else the copy needs to be a working checkout. `tests/`, `pyproject.toml`
+# and `uv.lock` are copied by the tool already; these two are not, and two unit
+# tests read them - the worked example under `docs/examples/` and the scripts
+# under `tools/`. Without them those tests fail against unmutated code, which
+# mutmut reports as a broken baseline rather than as a mutant.
+#
+# Nothing here is mutated. `only_mutate` above decides that, and it names
+# neither directory.
+also_copy = ["docs", "tools"]

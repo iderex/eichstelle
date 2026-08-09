@@ -1,0 +1,168 @@
+# The mutation run. It is scored, it is reported, and it refuses nothing.
+#
+# Line coverage says a line ran. It does not say anything would have noticed if
+# the line had been wrong. This asks the second question, by changing the code
+# and seeing whether a test fails, and it is the only routine measurement here
+# that tells a suite that tests from a suite that executes.
+#
+# Two things about the posture, and issue #48 argues both at length.
+#
+# It does not gate. The score moves for reasons that are not about test quality
+# - a refactor changes how many mutable points exist and the number moves with
+# it - so a threshold over it produces red runs that teach everybody to ignore
+# the check. And a mutation run is slow enough that putting it on the
+# pull-request path would make every change wait for it. So this workflow has no
+# `pull_request` trigger and `docs/ci-checks.md` does not list it, because it
+# produces no check anybody sees on a pull request.
+#
+# It is loud when the TOOL breaks, which is a different thing from a low score
+# and is the failure this file is really built around. A mutation run that
+# quietly stops running leaves the last score standing and a green schedule, and
+# the stale number looks exactly as trustworthy as it did the day it was true.
+# So the mutation tool's own exit code decides nothing here: the run step
+# swallows it deliberately, and `tools/mutation_score.py` is the verdict. It
+# fails when, and only when, there is no score to read.
+#
+# Hardened the way every other workflow here is: actions pinned by commit hash
+# with a version comment, checkout without persisted credentials, deny-all
+# permissions at workflow level with the minimum granted per job, and every
+# expression reaching a shell through an environment variable rather than an
+# interpolation. The workflow-security audit runs on this file like any other.
+name: mutation
+
+on:
+  # Weekly. The run takes long enough that a nightly one would spend most of a
+  # month re-measuring a tree nobody changed, and the number moves slowly.
+  schedule:
+    - cron: "23 4 * * 2"
+  # So that the measurement can be taken deliberately, which is how the first
+  # one in `docs/measurements/mutation-score.md` was taken, and so that a
+  # change to this file can be exercised without waiting a week for it.
+  workflow_dispatch:
+
+permissions: {}
+
+# Not cancelled when superseded, unlike the gate. A run here is the product
+# rather than a check on a proposal, and cancelling one throws away an hour of
+# work to save nothing.
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  score:
+    name: mutation score
+    runs-on: ubuntu-latest
+    # Generous, because the whole point is that this is the slow measurement.
+    # If it ever reaches this limit the run produced no score, and no score is
+    # the loud case: the step below never ran, the job is red, and the step
+    # after it opens the tracking issue.
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      # To open or update the tracking issue when no score comes out. Nothing
+      # else here writes anything.
+      issues: write
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No step pushes via git, so do not persist the token in .git/config.
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set and the mutation tool
+        # Locked, like every other job here, and for a sharper reason than
+        # usual: a mutation tester that changed which mutants it generates
+        # between two runs of the same commit would move the score for a reason
+        # that has nothing to do with the suite. The group is asked for by name
+        # because `uv sync` installs `dev` and nothing else, and issue #48 keeps
+        # this tool out of what a contributor installs.
+        run: uv sync --locked --group mutation
+
+      - name: Run the mutation testing
+        # The exit code is deliberately discarded. mutmut exits non-zero when
+        # mutants survived, and a surviving mutant is the finding this run
+        # exists to produce rather than a failure of it. What decides the job is
+        # the next step, which fails when there is no score at all.
+        #
+        # `export-cicd-stats` is what turns the run's own bookkeeping into the
+        # small JSON document of counts the next step reads. It is run
+        # separately, and its exit code is discarded too, so that a crash in the
+        # export leaves no stats file and is reported as the broken tool it is.
+        run: |
+          set +e
+          .venv/bin/mutmut run
+          echo "the mutation run exited $?, which decides nothing here"
+          .venv/bin/mutmut export-cicd-stats
+          echo "the stats export exited $?, which decides nothing here"
+          exit 0
+
+      - name: Read the score
+        id: score
+        # The only step that can fail this job. Exit 0 whatever the number is,
+        # exit 2 when there is no number, and `docs/quality-parity.md` holds the
+        # rule that a low number is a finding rather than a failure.
+        run: .venv/bin/python tools/mutation_score.py --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Keep the run for a reader
+        # The counts, the per-mutant verdicts and the surviving mutants
+        # themselves. Somebody reading a score wants to know which mutants
+        # lived, and that is in the run's own metadata rather than in the score.
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: mutation-run
+          path: |
+            mutants/mutmut-cicd-stats.json
+            mutants/**/*.meta
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Open or update the tracking issue
+        # Only when there was no score. A low score never reaches here, which is
+        # the whole distinction issue #48 asks to be built in rather than
+        # assumed: a scheduled job that opens an issue on every genuine finding
+        # is a job somebody switches off within a month.
+        #
+        # One issue rather than one per run. A weekly failure that opens a
+        # fifty-second issue is the same drawer of unread alerts that
+        # `docs/quality-parity.md` refuses for the code scanning view.
+        #
+        # It carries a label and an assignee. It carries no milestone, and that
+        # is a choice rather than an omission: the milestone this belongs to
+        # depends on when the tool broke, and one picked today would be wrong by
+        # the time it is used.
+        if: failure() && steps.score.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          title="The mutation run is not producing a score"
+          body="The scheduled mutation run finished without a score. That is the
+          tool having stopped rather than a low number, and issue #48 asks for it
+          to be loud for exactly that reason: a run that stops running leaves the
+          last score standing and the schedule green.
+
+          Run: $RUN_URL
+          Commit: $COMMIT
+
+          What the score reader said is in that run's log, under the step that
+          reads the score. \`docs/measurements/mutation-score.md\` holds the last
+          number anybody actually measured, and it is now older than it looks."
+
+          existing=$(gh issue list --state open --label ci --search "$title in:title" \
+            --json number,title --jq "[.[] | select(.title == \"$title\")][0].number // empty")
+
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+            echo "commented on existing tracking issue #$existing"
+          else
+            gh issue create --title "$title" --body "$body" \
+              --label ci --assignee iderex
+          fi
