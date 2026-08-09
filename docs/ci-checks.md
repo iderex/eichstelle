@@ -116,11 +116,22 @@ The supply-chain self-audit in `scorecard.yml` is deliberately absent from this
 list. It has no `pull_request` trigger, because that path cannot publish its
 results, so it is not a check anybody sees on a pull request.
 
+The mutation run in `mutation.yml` is absent for the same shape of reason and a
+different one underneath it. It has no `pull_request` trigger either, because
+issue #48 decides that a mutation score never blocks a change: the number moves
+with refactoring rather than with test quality, and a run slow enough to make
+every pull request wait for it would be switched off within a month. It is
+scheduled, its score goes into its own job summary and into
+`docs/measurements/mutation-score.md`, and the one thing it does fail on is
+producing no score at all, which is the tool having stopped rather than a low
+number.
+
 ## What none of them do
 
 None of them is a coverage bar, a mutation score or a fuzzing run.
 `docs/quality-parity.md` is the map of what is still owed and which issue owes
-it.
+it. The mutation score exists as of #48 and is not on this list because nothing
+it does reaches a pull request.
 
 None of them measures anything about acoustics. `README.md` says what a green
 result from this suite does and does not mean, and none of the checks above is

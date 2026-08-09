@@ -113,6 +113,30 @@ None of the three is a security review, and the bandit rules in the linter's
 selection are pattern matches over source text rather than an analysis. A rule
 set of this shape is a floor and can be evaded by anyone who wants to.
 
+None of them is a mutation run, and that one now exists without being a gate. It
+is a sixth command and it refuses nothing:
+
+    uv sync --locked --group mutation
+    mutmut run
+    mutmut export-cicd-stats
+    python tools/mutation_score.py
+
+The tool sits in its own dependency group, so `uv sync --locked` on its own does
+not install it and neither the gate above nor a contributor pays for a slow tool
+they are not running. The last command is the only one whose exit code means
+anything: zero whatever the score is, and 2 when the run produced no score,
+because a mutation run that stopped running leaves the last number standing and
+looks exactly as green as one that succeeded. Issue #48 is where that asymmetry
+is argued, `.github/workflows/mutation.yml` runs it on a schedule rather than on
+a pull request, and `docs/measurements/mutation-score.md` holds the numbers and
+what a low one does and does not mean.
+
+Two things it does not do. It does not run on Windows: mutmut refuses to start
+there and says so, so this measurement is taken inside a Linux environment or
+left to the schedule. And it covers the verdict surface rather than the package;
+`[tool.mutmut]` in `pyproject.toml` names what is mutated and why the generators
+are outside it.
+
 A tool version is bounded from below in `pyproject.toml` and pinned exactly, with
 a hash, in `uv.lock`. Which of the two a contributor gets depends on which
 install command they ran, and only `uv sync --locked` refuses to move. The
