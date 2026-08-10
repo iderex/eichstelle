@@ -238,14 +238,16 @@ jobs:
         run: .venv/bin/python tools/coverage_gate.py coverage.json
 
   fixtures:
-    # Every fixture against the schema, and the signal checksums. Both halves
-    # are empty today and this job exists anyway, so that the fixture work in
-    # milestone 3 has a check name to land into rather than arriving with one.
+    # Every fixture against the schema, and every fixture's signal against the
+    # committed checksums. Both halves run in one command, and both are empty
+    # today because no fixture is tracked. The job exists anyway, so that the
+    # fixture work in milestone 3 has a check name to land into rather than
+    # arriving with one.
     #
     # An empty job that prints nothing and reports green is the failure this
     # whole workflow is against, so it says out loud how many fixtures it read
-    # and it says that the checksum half does not exist yet. A reader who sees
-    # this check green learns exactly what it asserted, which today is nothing.
+    # and how many stimuli it held still. A reader who sees this check green
+    # learns exactly what it asserted, which today is nothing.
     name: fixtures
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -263,34 +265,37 @@ jobs:
       - name: Install the locked set
         run: uv sync --locked
 
-      - name: Validate every fixture against the schema
+      - name: Validate every fixture and verify every signal checksum
         # The count comes from the index rather than from the working tree, so
         # an untracked file somebody left in the checkout is not validated and
         # cannot make this check look busier than it is.
         #
-        # The validator itself exits 2 over an empty directory and says it
-        # refuses to report a clean run over nothing. That is right for somebody
-        # who typed a path and got no files, and wrong as a red check on every
-        # pull request for a milestone. So the empty case is decided here, in
-        # the open, and the moment one fixture is tracked the validator's own
-        # exit code becomes this job's.
+        # The command itself exits 2 over an empty directory and says it refuses
+        # to report a clean run over nothing. That is right for somebody who
+        # typed a path and got no files, and wrong as a red check on every pull
+        # request for a milestone. So the empty case is decided here, in the
+        # open, and the moment one fixture is tracked the command's own exit
+        # code becomes this job's.
+        #
+        # One command rather than two. It validates against the schema and then
+        # regenerates every signal and holds it against fixtures/checksums.txt,
+        # which are the two halves this job's name promises. A stimulus that
+        # moved is exit 1 and names the fixture with both hashes.
         run: |
           set -euo pipefail
           tracked=$(git ls-files -- 'fixtures/*.json' | wc -l)
 
           if [ "$tracked" -eq 0 ]; then
-            echo "0 fixtures validated: no fixture is tracked under fixtures/ at this commit."
+            # A negative disclosure, printed on every run rather than written
+            # once in a document nobody opens next to the green tick. The
+            # manifest is tracked and holds no entry, because there is no
+            # fixture for it to hold. Milestone 3 is where the first one lands.
+            echo "0 fixtures validated and 0 signal checksums verified: no fixture is tracked under fixtures/ at this commit."
             echo "::warning::The fixtures check asserted nothing about correctness at this commit. There is no fixture set yet; milestone 3 is where one arrives."
           else
             echo "$tracked tracked fixture file(s) under fixtures/"
             .venv/bin/python -m eichstelle.fixtures fixtures/
           fi
-
-          # A negative disclosure, printed on every run rather than written once
-          # in a document nobody opens next to the green tick. This job's name
-          # promises the schema and the checksums; it delivers the first half
-          # only, and issue #25 is where the second arrives.
-          echo "0 signal checksums verified: nothing in this tree records a stimulus checksum yet (issue #25)."
 
   invariants:
     # This project's own invariants as rules that refuse, issue #49. The rules

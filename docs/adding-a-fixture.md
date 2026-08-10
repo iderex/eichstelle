@@ -177,18 +177,30 @@ others.
 
 ## Writing it, and checking it
 
-Copy the worked example, change what differs, and run the validator:
+Copy the worked example, change what differs, and record what its signal renders
+to:
 
+    python -m eichstelle.fixtures --write-checksums fixtures/
     python -m eichstelle.fixtures fixtures/
 
-Exit 0 is every file read and valid, exit 1 is at least one refusal, exit 2 is a
-run that did not complete. It reports everything it finds in one pass rather than
+The first command adds your fixture's line to `fixtures/checksums.txt` and
+prints what moved. The second is the check: it validates against the schema and
+then regenerates every signal and holds it against those recorded hashes. Exit 0
+is every file read, every fixture valid and every stimulus where it was; exit 1
+is at least one refusal or at least one stimulus that moved; exit 2 is a run
+that did not complete. It reports everything it finds in one pass rather than
 stopping at the first problem, so a first fixture gets one list rather than five
 iterations.
 
-The same command runs as the `fixtures` check on a pull request, over the tracked
-files. `docs/fixtures.md` lists every refusal and the way a fixture set goes
-quietly wrong without it.
+A fixture with no line in the manifest does not pass the check. That is the
+point of the file rather than an inconvenience: what an adapter is handed is the
+bytes some code produced from your description, and until a hash of them is
+committed nothing holds them still.
+
+The second command runs as the `fixtures` check on a pull request, over the
+tracked files. `docs/fixtures.md` lists every refusal, says exactly what the
+hash covers and what it excludes, and describes the way a fixture set goes
+quietly wrong without either half.
 
 ## What the pull request body has to carry
 

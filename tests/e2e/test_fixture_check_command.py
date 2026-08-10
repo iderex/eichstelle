@@ -62,13 +62,20 @@ def write(directory: Path, name: str, document: object) -> None:
 
 
 def test_a_directory_of_valid_fixtures_passes(tmp_path: Path) -> None:
-    """Exit zero, and the count on stdout so a log says what was examined."""
+    """Exit zero, and both counts on stdout so a log says what was examined.
+
+    The manifest is written first, because the check runs both halves its name
+    promises and a fixture set with no committed checksum is a set whose stimuli
+    nothing holds still.
+    """
     write(tmp_path / "fixtures", "tone.json", VALID)
+    assert run_check("--write-checksums", str(tmp_path / "fixtures")).returncode == 0
 
     result = run_check(str(tmp_path / "fixtures"))
 
     assert result.returncode == 0, result.stderr
     assert "1 fixture(s) valid" in result.stdout
+    assert "1 signal checksum(s) verified" in result.stdout
 
 
 def test_a_malformed_fixture_reddens_the_check(tmp_path: Path) -> None:
@@ -127,3 +134,74 @@ def test_no_argument_is_refused() -> None:
 
     assert result.returncode == 2
     assert "usage:" in result.stderr
+
+
+def test_a_fixture_set_with_no_manifest_does_not_pass(tmp_path: Path) -> None:
+    """Exit two rather than zero.
+
+    The fixtures are valid and nothing records what their stimuli are, so what
+    the run would prove is that the descriptions are well formed. Reporting that
+    as a clean check is the silent half of this command's own name.
+    """
+    write(tmp_path / "fixtures", "tone.json", VALID)
+
+    result = run_check(str(tmp_path / "fixtures"))
+
+    assert result.returncode == 2
+    assert "there is no manifest" in result.stderr
+    assert "failing closed" in result.stderr
+
+
+def test_a_stimulus_that_moved_reddens_the_check(tmp_path: Path) -> None:
+    """Exit one, with the fixture named and both hashes shown.
+
+    This is the failure the manifest exists for, run as a process. An
+    investigation that starts here starts at the stimulus; without it, it starts
+    by suspecting every implementation at once.
+    """
+    write(tmp_path / "fixtures", "tone.json", VALID)
+    assert run_check("--write-checksums", str(tmp_path / "fixtures")).returncode == 0
+
+    moved = json.loads(json.dumps(VALID))
+    moved["signal"]["parameters"]["frequency_hz"] = "1000.0000001"
+    write(tmp_path / "fixtures", "tone.json", moved)
+
+    result = run_check(str(tmp_path / "fixtures"))
+
+    assert result.returncode == 1
+    assert "example-tone-at-forty-decibels" in result.stderr
+    assert "the stimulus moved" in result.stderr
+    assert result.stderr.count("sha256:") == 2
+
+
+def test_writing_the_manifest_says_what_moved(tmp_path: Path) -> None:
+    """The one deliberate way to move it prints rather than staying quiet."""
+    write(tmp_path / "fixtures", "tone.json", VALID)
+
+    first = run_check("--write-checksums", str(tmp_path / "fixtures"))
+
+    assert first.returncode == 0, first.stderr
+    assert "no entry in the manifest" in first.stdout
+    assert "1 entr(ies) written" in first.stdout
+
+    second = run_check("--write-checksums", str(tmp_path / "fixtures"))
+
+    assert second.returncode == 0, second.stderr
+    assert "nothing moved" in second.stdout
+
+
+def test_the_manifest_is_not_walked_into_as_a_fixture(tmp_path: Path) -> None:
+    """It carries no `.json` suffix, and that is load-bearing rather than a style.
+
+    The command walks a directory for `*.json` and the gate counts the same
+    pattern. A manifest under that name would be handed to the validator as a
+    fixture and refused, so the check would be red for as long as a manifest
+    existed.
+    """
+    write(tmp_path / "fixtures", "tone.json", VALID)
+    assert run_check("--write-checksums", str(tmp_path / "fixtures")).returncode == 0
+
+    names = sorted(path.name for path in (tmp_path / "fixtures").iterdir())
+
+    assert names == ["checksums.txt", "tone.json"]
+    assert run_check(str(tmp_path / "fixtures")).returncode == 0

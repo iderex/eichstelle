@@ -92,6 +92,13 @@ SURFACE: Final[tuple[tuple[str, str], ...]] = (
         "the spread between implementations and the band it is tested against",
     ),
     (
+        "src/eichstelle/fixtures/checksums.py",
+        "the signal checksums, which decide whether a run proceeds at all. A "
+        "verification that passes when it should not is silent, and what comes "
+        "out of the run it let through is a false finding about somebody's "
+        "implementation, which is the harm this surface is drawn around",
+    ),
+    (
         "src/eichstelle/record/record.py",
         "the record writer, which is this project's primary output",
     ),
@@ -334,9 +341,9 @@ def main(argv: list[str]) -> int:
     else:
         print("Whole repository: no executable line reported. Reported, not enforced.")
     print()
-    print("The checksum verification issue #47 also names is not on the surface")
-    print("because nothing in this tree verifies a stimulus checksum yet. Issue")
-    print("#25 is where it arrives, and it belongs on the surface when it does.")
+    print("The checksum verification issue #47 also names is on the surface as of")
+    print("#25. What it holds still is empty: no fixture is tracked, so the module")
+    print("is covered by its own suite and by nothing the fixture set contributes.")
 
     if measured < THRESHOLD:
         print(
