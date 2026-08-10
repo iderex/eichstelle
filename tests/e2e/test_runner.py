@@ -21,6 +21,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import time
 from collections.abc import Iterator
 from decimal import Decimal
 from pathlib import Path
@@ -340,6 +341,57 @@ def test_an_adapter_that_ignores_being_asked_to_stop_is_killed(tmp_path: Path) -
     assert result.termination == KILLED
 
 
+# How many times the measurement below is multiplied to get the limit. The
+# measurement and the run it has to cover are the same work on the same machine
+# minutes apart, and the same work timed ten times on the machine that produced
+# issue #111 varied by a factor of 3.3 between its fastest and slowest sample.
+# Four is that factor with room above it, and what makes it defensible is that
+# it multiplies a measurement rather than standing on its own.
+PROCESS_START_MARGIN = 4
+
+# The limit never goes below this, whatever the measurement says. A machine that
+# starts a process in forty milliseconds would otherwise get a limit of under a
+# fifth of a second, which is a shorter fuse than the one that has been working,
+# and the test's own duration is the limit, so the floor is also what keeps it
+# cheap where nothing is wrong.
+PROCESS_START_FLOOR = Decimal("1")
+
+
+def _two_process_starts() -> float:
+    """What this machine charges for the process creations a limit must cover.
+
+    The runner starts its clock before the adapter's interpreter does, so a
+    limit has to cover starting the adapter, the adapter starting its child, and
+    the small write between them. Two of those three are the operating system's
+    work and this suite has no say in what they cost. An interpreter that starts
+    an interpreter is the same shape, so it is what gets timed.
+
+    It over-estimates on purpose. The inner interpreter here runs to completion
+    while the adapter's child only has to be launched, and over-estimating a
+    quantity a margin is applied to is the safe direction.
+
+    The maximum of two samples rather than one. The spread between samples is
+    the thing that made issue #111 depend on what had run before it, so a single
+    sample can land at the bottom of it and produce a limit the next run does
+    not fit inside.
+    """
+    samples = []
+    for _ in range(2):
+        started = time.perf_counter()
+        subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "import subprocess, sys;"
+                " subprocess.run([sys.executable, '-c', 'pass'], check=True)",
+            ],
+            capture_output=True,
+            check=True,
+        )
+        samples.append(time.perf_counter() - started)
+    return max(samples)
+
+
 def test_stopping_an_adapter_reaches_a_process_it_started(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -350,11 +402,25 @@ def test_stopping_an_adapter_reaches_a_process_it_started(
     passing everywhere by asking for less. On Windows the constant is False and
     the assertion is that the child survives, which is the documented
     limitation rather than a hidden one.
+
+    The limit is measured rather than written down, for the reason in issue
+    #111: the constant here was one second, and one second is less than this
+    platform charges for two process creations, so the adapter was killed before
+    it had recorded the child and the assertion could not be made at all. The
+    limit is also this test's duration, because the adapter is written to sleep
+    past any limit, so a number large enough for the slowest machine would be
+    paid by every run on the fastest one. Measuring is what avoids choosing
+    between those two.
     """
+    measured = _two_process_starts()
+    limit = max(
+        PROCESS_START_FLOOR,
+        Decimal(str(round(measured * PROCESS_START_MARGIN, 3))),
+    )
     pid_file = tmp_path / "child.pid"
     configuration = RunnerConfiguration(
         workspace=tmp_path / "workspace",
-        timeout_seconds=Decimal("1"),
+        timeout_seconds=limit,
         grace_seconds=3.0,
     )
     monkeypatch.setenv("EICHSTELLE_CHILD_PID_FILE", str(pid_file))
@@ -365,6 +431,16 @@ def test_stopping_an_adapter_reaches_a_process_it_started(
     )
 
     assert result.outcome == TIMED_OUT
+    # Said rather than left as a bare FileNotFoundError from the read below,
+    # which is how issue #111 presented and which named neither the limit nor
+    # the reason the file was absent.
+    assert pid_file.exists(), (
+        "the adapter was stopped before it recorded the child it started, so "
+        "nothing here says whether the stop reached that child. The limit was "
+        f"{limit} seconds, from {measured:.3f} seconds measured for two process "
+        f"starts on this machine times a margin of {PROCESS_START_MARGIN}, and "
+        "the adapter needed longer than that to start one"
+    )
     child = int(pid_file.read_text(encoding="utf-8"))
     try:
         assert _is_running(child) is not TERMINATION_REACHES_CHILDREN
