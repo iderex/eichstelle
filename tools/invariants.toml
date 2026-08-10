@@ -1,0 +1,120 @@
+# This project's invariants, as rules that refuse.
+#
+# One entry per invariant. Each one is a decision that would otherwise be prose
+# nobody enforces, and each one names the decision it comes from and the mistake
+# it is meant to catch. Issue #49 is where the set was argued and
+# docs/quality-gates.md is how a rule is added.
+#
+# Every field below is required and tools/invariants.py refuses a rule that
+# leaves one out. That is deliberate: a rule with no `mistake` is a pattern
+# somebody will meet in a red check with nothing to tell them what it is for,
+# and a rule with no `bound` reads as airtight. `prompted_by` is the place to
+# record which defect asked for the rule, so that a rule nobody remembers the
+# reason for can still be argued with.
+#
+# `paths` selects what a rule reads. An entry ending in a slash is a directory
+# and covers everything under it; anything else is one exact path. `suffixes`
+# narrows that selection by file extension and may be left empty to mean every
+# file. `patterns` are Python regular expressions, matched line by line against
+# the file as it is in the index.
+#
+# These are token-level pattern matches over source text. They are a floor and
+# not a guarantee: anybody who wants to write the shape a different way can,
+# and several of the rules below say where their own edge is.
+
+[[rule]]
+id = "no-transcribed-expected-value"
+decision = "Record 0012 supersedes 0004's provenance list, and CONTRIBUTING.md lists it among the four things this project will not accept: no expected value is copied out of a purchased standard."
+mistake = "A fixture declaring `\"provenance\": \"standard-clause\"`, which record 0004 once described as the strongest result the suite can produce, so it is the value somebody reaching for authority picks first."
+bound = "It matches the provenance field and a small set of transcription phrases. It cannot tell a citation from a transcription in prose, because an honest fixture names a standard designation in exactly the same words, and no token separates the two. The half it does catch is the half a schema value makes checkable."
+prompted_by = "Not a defect that got through. It landed with #49 ahead of the first fixture, because this is the invariant that cannot be violated once: a public tree carrying a number lifted from a purchased table is a fixture set nobody may copy."
+paths = ["fixtures/", "docs/examples/", "src/", "tests/", "tools/"]
+suffixes = [".json", ".py"]
+patterns = [
+  '"provenance"\s*:\s*"standard-clause"',
+  '(?i)\b(?:transcrib\w+|copied|lifted|taken)\s+(?:\w+\s+){0,3}from\s+(?:the\s+|a\s+|an\s+)?(?:purchased\s+|named\s+|bought\s+)?(?:standard|clause|table|annex)\b',
+]
+
+[[rule.allow]]
+path = "tests/unit/test_invariants.py"
+reason = "It is the suite that proves this rule bites, so it carries one line of the shape the rule refuses in order to feed it to the matcher. Nothing in it is a fixture and nothing in it declares a provenance."
+
+[[rule]]
+id = "no-fallback-from-a-licensed-reference"
+decision = "Record 0005 decides that reference signals are generated and never shipped, and issue #31 decides that a missing licensed reference is a not-run verdict. Under no circumstance does an absent licensed reference fall back to a generated signal."
+mistake = "The one-line rescue: `signal = licensed_reference(fixture) or render(fixture)`, or a generator call sitting on the `except` or `else` line under a lookup that failed. Both read as robustness and both attribute a result to the wrong stimulus."
+bound = "It refuses the shape on one line. A fallback written across a function boundary, where the caller decides between the two, passes it, and the structural half of that belongs to the architecture conformance tests in #52. #31's own reasoning says a test that happens not to reach the path proves less than a rule that refuses the shape, and this is the rule half rather than the whole."
+prompted_by = "Not a defect that got through. #31 asks for a bullet asserting that no fallback path exists, and records on that issue that a passing test proves the path was not taken on one input rather than that no path exists."
+paths = ["src/"]
+suffixes = [".py"]
+patterns = [
+  '\blicensed[a-z_]*\s+or\s+',
+  '\b(?:except|else)\b[^#\n]*\b(?:render|render_noise|render_modulated|write_wave)\s*\(',
+  '\blicensed[a-z_]*[^#\n]*\b(?:render|render_noise|render_modulated|write_wave)\s*\(',
+]
+
+[[rule]]
+id = "no-arithmetic-in-an-adapter"
+decision = "Record 0003 decides that this repository implements no metric, and issue #35 says an adapter is a translation layer that contains no correction, workaround or compensation. Arithmetic on a value the wrapped library returned is this project taking a side."
+mistake = "Scaling, offsetting or rounding a returned value to make two implementations agree. It arrives with the best of intentions, from somebody fixing what looks like a unit mismatch, and it turns a finding into a number this project produced."
+bound = "It catches arithmetic against a numeric literal and a bare `round`, which is the shape a correction takes. A correction routed through a named constant defined elsewhere in the adapter passes it. Nothing here reads what the wrapped library returns, so the rule is about the shape of the line and not about the value."
+prompted_by = "Not a defect that got through. No adapter directory exists yet; the rule is placed ahead of the first one, which is the only moment it costs nothing."
+paths = ["adapters/"]
+suffixes = [".py"]
+patterns = [
+  '\b(?:value|values|result|results|loudness|sharpness|tonality|roughness|fluctuation)\b[^#\n]*[-+*/]\s*[0-9]',
+  '\bround\s*\(',
+  '\b(?:10|20)\s*\*\s*(?:math\.)?log10\s*\(',
+]
+
+[[rule]]
+id = "no-default-tolerance-in-the-comparator"
+decision = "Record 0007 decides the verdict vocabulary and the tolerance model, and a fixture states its tolerance and its kind because a bare number with no kind is the mistake that field pair exists to make impossible. A default supplied by the comparator is that mistake reintroduced where no fixture author can see it."
+mistake = "`fixture.get(\"tolerance\", \"0.1\")`, or a `DEFAULT_TOLERANCE` constant, added to make a fixture without the field runnable. It turns a refusal into a verdict, and the verdict is against a band nobody declared."
+bound = "It reads the comparison package only. A default introduced in the runner, the report or a fixture loader is outside what this rule looks at, and a value read from configuration rather than written as a literal passes it."
+prompted_by = "Not a defect that got through. The validator already refuses a fixture with no tolerance, so this rule guards the other end: the place where somebody would work around that refusal."
+paths = ["src/eichstelle/compare/"]
+suffixes = [".py"]
+patterns = [
+  '''\btolerance[a-z_]*\s*(?::[^=\n]*)?=\s*(?:Decimal\()?["']?-?[0-9]''',
+  '''\.get\(\s*["']tolerance(?:_kind)?["']\s*,''',
+  '^\s*(?:DEFAULT_TOLERANCE|TOLERANCE_DEFAULT|DEFAULT_BAND)\b',
+]
+
+[[rule]]
+id = "no-socket-device-or-display-in-the-suite"
+decision = "Record 0010 decides that this project is headless, unprivileged and offline by birth. A suite that opens a socket, a device or a display is that decision contradicted by the one part of the tree that is supposed to check it."
+mistake = "A test reaching a real service to see whether something works, or importing a toolkit that needs a display. It passes on the machine it was written on and fails in the gate, where the suite runs in an empty network namespace."
+bound = "It matches the obvious imports and calls. A connection made through a library that wraps them, or through `ctypes` against the platform's own sockets library, passes it, which is the same edge the offline guard states about itself. The allow list below is where a file names one of these in order to refuse it."
+prompted_by = "Not a defect that got through. The offline promise is already asserted by the gate and by the architecture conformance tests; this rule refuses the source shape so that a test does not have to be run in the sandbox to be found out."
+paths = ["tests/"]
+suffixes = [".py"]
+patterns = [
+  '^\s*import\s+socket\b',
+  '^\s*from\s+socket\s+import\b',
+  '\bsocket\.socket\s*\(',
+  '\bcreate_connection\s*\(',
+  '^\s*import\s+(?:tkinter|turtle)\b',
+  '''["']/dev/(?!null\b)''',
+  '\bDISPLAY\b',
+]
+
+[[rule.allow]]
+path = "tests/e2e/offline/offline_guard.py"
+reason = "It is the offline guard. It imports the socket module and replaces four of its functions in order to refuse an outbound connection, so it names the thing for the same reason a lock names a door."
+
+[[rule.allow]]
+path = "tests/e2e/test_architecture_conformance.py"
+reason = "It is the test that asserts the headless promise. It names the display variables and the socket calls as the subjects it checks are absent, in source it writes out and runs in a subprocess, so a rule that refused it would refuse the check itself. The exemption is the whole file rather than the lines, which is broader than it needs to be."
+
+[[rule]]
+id = "no-implementation-under-test-in-the-core-dependencies"
+decision = "Record 0002 limits the harness core to NumPy, SciPy and a JSON Schema validator, and issue #35 says an adapter lives in its own directory with its own dependency declaration and is not a dependency of the harness core. Installing the suite must not install an implementation it reports on."
+mistake = "Adding the library to `dependencies` in pyproject.toml to make an end-to-end test import, which makes the harness depend on one of the three things it compares and makes the isolation test in #35 unfalsifiable."
+bound = "It reads pyproject.toml and matches a dependency entry by name, anchored so that prose mentioning a library in a comment is not a match. It knows the three implementations this project targets by name and nothing else, so a fourth arrives unrefused until somebody adds it here, and it says nothing about uv.lock, where a transitive dependency would appear instead."
+prompted_by = "Not a defect that got through. #35 calls itself the first opportunity to break record 0002's rule, and the rule is cheaper to place before that adapter than after it."
+paths = ["pyproject.toml"]
+suffixes = []
+patterns = [
+  '''^\s*["'](?i:mosqito|sqat|psytools)\b''',
+]

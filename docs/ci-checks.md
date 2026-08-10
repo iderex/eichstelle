@@ -88,6 +88,27 @@ verified no signal checksums, which is the other half of what its name promises
 and which issue #25 owes. Read this check green today as "there was nothing to
 refuse", not as "the fixture set is sound".
 
+**`invariants`** runs `tools/invariants.py`, which matches this project's own
+invariants against the tracked tree. A failure is a line breaking one of them,
+or a run that did not complete: a rule file that will not parse, a rule that
+leaves out one of the fields it has to declare, a pattern that will not compile,
+or an exemption naming a path nobody tracks. Exit 1 is the first kind and exit 2
+is the second, and both fail the job.
+
+The rules are data in `tools/invariants.toml` rather than code, one entry per
+invariant, each naming the decision it enforces, the mistake it catches, its own
+edge and what prompted it. They are not listed here, because the file is the
+authority and a second copy would drift against it. A refusal quotes the rule's
+decision and its mistake, so a red check says what it is about without anybody
+opening that file.
+
+What it does not cover is a floor rather than a guarantee, and the run prints
+each rule's own edge on every pass rather than only in a document. These are
+token-level pattern matches over source text: a shape written a different way
+walks through, several of the rules read one directory and say so, and one of
+them reads a set of exemptions whose reasons are printed beside the count.
+Read this check green as "no line matched", never as "the invariant holds".
+
 **`no-tracked-audio`** runs `tools/refuse_tracked_audio.py`. A failure is a
 tracked file whose extension names an audio container, or a tracked file whose
 leading bytes match an audio container signature whatever it is called, or a
