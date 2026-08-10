@@ -179,3 +179,9 @@ migration rather than a commit.
 ## Status
 
 Accepted, 2026-08-07.
+
+Superseded by 0012, 2026-08-10, on the provenance list only: `standard-clause`
+is no longer one of the values, because a value transcribed from a purchased
+document cannot be redistributed with the fixture set that carries it, and the
+normative comparison moves to the licensed reference in issue #31. Every other
+section of this record is in force.

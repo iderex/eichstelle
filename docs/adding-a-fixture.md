@@ -148,10 +148,11 @@ not a claim that the outlier is wrong, and a report must not present it as one.
 Independence matters here: two implementations sharing a lineage agreeing is
 weaker evidence than the same agreement between two that do not.
 
-`standard-clause`. The value is transcribed from a named clause of a named
-edition. Record 0004 describes this as a value transcribed from a document the
-maintainer holds a copy of, and the next section is why that is not a route for a
-contribution.
+`standard-clause`. Not a provenance any fixture here declares. Record 0004
+listed it as a value transcribed from a document the maintainer holds a copy of,
+and record 0012 supersedes that list for the reason the next section gives. The
+value is still in the schema, because a published schema version is not edited,
+and it is the one value the validator will accept and a reviewer will not.
 
 ## The value you may not write down
 
