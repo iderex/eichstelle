@@ -30,14 +30,24 @@ The child run does not include this test, because a suite that ran itself would
 not stop. That is one skipped test inside the inner run and it is visible in the
 inner run's own output.
 
-## What this file does not assert about the fixture set
+## What the two fixture-set checks are worth today
 
-Issue #52 also asks for the two-way correspondence between fixtures and the
-checksum manifest. There is no manifest in this tree; issue #25 is where it
-lands, and asserting a correspondence against a format nobody has chosen yet
-would be a test written against a guess. The fixture identifier check below
-skips rather than passes while the fixture set is empty, so it says so in every
-run instead of reporting green over nothing.
+Both of them read the set this repository actually carries, which is the claim
+the validator's own suite cannot make: that suite proves the rules bite on the
+inputs it is handed, and these say the tracked tree is one of them.
+
+The set is empty at this commit, so both skip rather than pass, because a green
+tick over no files cannot be told from a green tick over a set that was
+checked. The correspondence check skips only while the fixture set and the
+manifest are BOTH empty, and that is the part worth reading twice: the failure
+it exists for is a fixture deleted with its manifest entry left behind, and an
+entry left behind is a manifest that is not empty, so that case asserts rather
+than skips even with no fixture in the tree.
+
+It compares identifiers and revisions and never hashes anything. Whether a
+signal still renders to the bytes the manifest recorded is the `fixtures` check
+in `docs/ci-checks.md`, which regenerates every stimulus; a second opinion here
+would be the slower half of that check run again under another name.
 """
 
 from __future__ import annotations
@@ -49,12 +59,19 @@ import os
 import subprocess
 import sys
 import tomllib
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
 
 import pytest
+
+from eichstelle.fixtures.checksums import (
+    MANIFEST_NAME,
+    Entry,
+    read_manifest,
+    render_manifest,
+)
 
 # The repository, from this file's own location. Asserted rather than assumed,
 # so a moved test file fails here instead of quietly checking a smaller tree.
@@ -482,6 +499,132 @@ def test_every_tracked_fixture_carries_a_distinct_identifier() -> None:
             f"{identifier!r}"
         )
         seen[identifier] = path.name
+
+
+def _claimed_and_committed(
+    root: Path,
+) -> tuple[dict[tuple[str, int], str], set[tuple[str, int]]]:
+    """What the fixtures under `root` claim, and what the manifest beside them holds.
+
+    A fixture is keyed on its identifier and its revision together, which is the
+    key the manifest itself is written under, so a fixture revised without its
+    entry being regenerated is a pair the manifest has no line for rather than a
+    pair that silently matches an older line.
+
+    The walk is recursive, because `python -m eichstelle.fixtures` walks the
+    fixture root with `rglob` and writes an entry for everything it finds. A
+    check reading one directory level would report a fixture in a subdirectory
+    as an entry nothing claims, which is a failure about this file rather than
+    about the tree.
+
+    Only `id` and `revision` are read. What else a fixture has to carry is the
+    schema's to refuse, and a second opinion here would drift from the
+    validator.
+    """
+    claimed: dict[tuple[str, int], str] = {}
+    for path in sorted(root.rglob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        claimed[(document["id"], document["revision"])] = path.name
+    entries = read_manifest(root / MANIFEST_NAME)
+    committed = {(entry.fixture_id, entry.revision) for entry in entries}
+    return claimed, committed
+
+
+def _correspondence_failures(
+    claimed: Mapping[tuple[str, int], str], committed: set[tuple[str, int]]
+) -> list[str]:
+    """Every fixture with no entry, and every entry no fixture claims.
+
+    Both directions in one list, each naming the file or the line a reader has
+    to open, because the two are repaired differently: a fixture with no entry
+    is a manifest that was not regenerated, and an entry with no fixture is a
+    line a deletion left behind.
+    """
+    failures = [
+        f"{identifier} revision {revision} has a manifest entry and no fixture "
+        "under the fixture root claims it, so a later fixture reusing that "
+        "identifier would be held against a stranger's bytes"
+        for identifier, revision in sorted(committed - set(claimed))
+    ]
+    failures.extend(
+        f"{claimed[key]} claims {key[0]} revision {key[1]} and the manifest "
+        "holds no entry for it, so nothing holds that stimulus still"
+        for key in sorted(set(claimed) - committed)
+    )
+    return failures
+
+
+# Decision record 0005: a generated stimulus is proved to be the one the fixture
+# meant by a committed checksum, and the record names issue #52 as where the
+# two-way correspondence between fixtures and manifest entries is asserted, so
+# neither can drift from the other unnoticed.
+def test_every_fixture_has_a_manifest_entry_and_every_entry_a_fixture() -> None:
+    """The tracked fixture set and the tracked manifest name the same signals.
+
+    This is the failure the pair exists for: a fixture is deleted, its entry
+    stays, and six months later somebody spends a day working out why a checksum
+    has no signal. The reverse costs less to find and is worse to have, because
+    a fixture nothing records is a stimulus nothing holds still.
+    """
+    root = REPOSITORY / "fixtures"
+    claimed, committed = _claimed_and_committed(root)
+    if not claimed and not committed:
+        pytest.skip(
+            "no fixture is tracked under fixtures/ at this commit and the "
+            "manifest beside them is empty, so the two agree about nothing; "
+            "milestone 3 is where a set arrives. An entry left behind by a "
+            "deleted fixture does not reach this skip"
+        )
+    failures = _correspondence_failures(claimed, committed)
+    assert not failures, (
+        f"the fixture set and {root / MANIFEST_NAME} have drifted apart. "
+        "`python -m eichstelle.fixtures --write-checksums fixtures/` "
+        "regenerates the manifest, and its diff is what the pull request "
+        "body explains:\n" + "\n".join(failures)
+    )
+
+
+# Decision record 0005, as the near-miss: the check above passes over a tree
+# where the two happen to agree, and nothing in that shows it would notice a
+# tree where they do not.
+def test_the_correspondence_catches_a_stale_entry_and_an_unrecorded_fixture(
+    tmp_path: Path,
+) -> None:
+    """One drift in each direction, read off a real root rather than asserted.
+
+    The manifest is written by the same renderer the command writes with, so
+    this cannot pass against a format the tree no longer uses. The digests in it
+    are not real hashes and nothing here reads them: this is the correspondence
+    between identifiers, and whether a signal still renders to its recorded
+    bytes is the `fixtures` check.
+    """
+    root = tmp_path / "fixtures"
+    root.mkdir()
+    for identifier in ("kept", "orphan"):
+        (root / f"{identifier}.json").write_text(
+            json.dumps({"id": identifier, "revision": 1}), encoding="utf-8"
+        )
+    (root / MANIFEST_NAME).write_text(
+        render_manifest(
+            [
+                Entry(fixture_id="kept", revision=1, digest="0" * 64),
+                Entry(fixture_id="stale", revision=2, digest="1" * 64),
+            ]
+        ),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    claimed, committed = _claimed_and_committed(root)
+    failures = _correspondence_failures(claimed, committed)
+
+    assert len(failures) == 2, f"expected one drift in each direction: {failures}"
+    left_behind, unrecorded = failures
+    assert left_behind.startswith("stale revision 2 has a manifest entry"), left_behind
+    assert unrecorded.startswith("orphan.json claims orphan revision 1"), unrecorded
+    assert not [failure for failure in failures if "kept" in failure], (
+        f"the fixture whose entry is present was reported as a drift: {failures}"
+    )
 
 
 # The license of this repository is a maintainer decision and is issue #1.
