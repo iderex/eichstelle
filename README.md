@@ -11,6 +11,13 @@ you publish it deliberately, and [docs/privacy.md](docs/privacy.md) is where
 that is written out for somebody who has to answer for it, including which parts
 of it a test checks and which parts are a rule people follow.
 
+The standards this suite tests against are sold by their publishers and no part
+of one is distributed here. [docs/legal.md](docs/legal.md) says what is and is
+not in this repository, where every expected value came from, and how an
+operator who owns a standard runs its own material without it ever reaching this
+tree. It also says the thing a legal reader needs first, which is that this
+repository declares no license and is therefore all rights reserved.
+
 ## What this project does not claim
 
 This project certifies nothing. A green result says that an implementation
