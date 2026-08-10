@@ -292,6 +292,47 @@ jobs:
           # only, and issue #25 is where the second arrives.
           echo "0 signal checksums verified: nothing in this tree records a stimulus checksum yet (issue #25)."
 
+  invariants:
+    # This project's own invariants as rules that refuse, issue #49. The rules
+    # are data in `tools/invariants.toml`, one entry per invariant, each naming
+    # the decision it comes from, the mistake it catches and its own edge.
+    # Adding a rule is adding an entry there and a row in the suite that shows
+    # it firing, rather than editing a job here.
+    #
+    # It is a separate check from `lint` and not another ruff rule, because
+    # ruff decides defects in Python and these are decisions about this
+    # repository: a provenance value in a JSON fixture, a dependency line in
+    # pyproject.toml, an arithmetic correction inside an adapter directory that
+    # does not exist yet. A red check named `invariants` also says which kind of
+    # rule was broken before anybody opens the log.
+    name: invariants
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the tree
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+
+      - name: Install the locked set
+        # The script imports nothing outside the standard library, so this is
+        # not about dependencies. It is about which interpreter runs it, for the
+        # same reason the audio guard below installs the locked set.
+        run: uv sync --locked
+
+      - name: Refuse a line that breaks an invariant
+        # Exit 1 is a refusal and exit 2 is a run that did not complete, and
+        # both fail this job. The second is the one worth naming: a rule file
+        # that will not parse, a rule missing a field or a pattern that will not
+        # compile is a check that has stopped checking, and one in that state
+        # reporting green is worse than no check.
+        run: .venv/bin/python tools/invariants.py
+
   no-tracked-audio:
     # Issue #6 decides that no audio file is committed here, because the
     # reference signals an implementation is validated against are part of the

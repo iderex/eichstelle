@@ -103,18 +103,57 @@ Issue #6 is the decision it enforces and issue #19 is where it was built and
 where it became a check name. Like the three above, a pull request runs it:
 
     $ grep -n refuse_tracked_audio .github/workflows/verify.yml
-    278:        run: .venv/bin/python tools/refuse_tracked_audio.py
+    373:        run: .venv/bin/python tools/refuse_tracked_audio.py
 
 The check is called `no-tracked-audio`. What it does not cover is written in the
 script's own docstring and repeated in `docs/ci-checks.md`: the signature table
 is a floor, and somebody who stores samples as text defeats both halves of it.
+
+None of the three refuses a line that breaks one of this project's own
+invariants. That is a sixth command:
+
+    python tools/invariants.py
+
+Exit 0 is no match, exit 1 is at least one refusal, and exit 2 is a run that did
+not complete, which includes a rule file that will not parse and a rule that
+leaves out a field it has to declare. Issue #49 is where the set was argued and
+the check is called `invariants`.
+
+Like the audio guard above, a pull request runs it:
+
+    $ grep -n invariants.py .github/workflows/verify.yml
+    334:        run: .venv/bin/python tools/invariants.py
+
+The rules are data in `tools/invariants.toml`, one entry per invariant, and this
+document does not list them: the file is the authority and a second copy here
+would drift against it. What each entry has to declare is the part worth stating
+outside the file, because it is what makes a red check answerable. A rule names
+the decision it comes from, the mistake it exists to catch, its own edge, and
+what prompted it. The loader refuses a rule that leaves out any of those rather
+than running it, so a pattern with no explanation beside it cannot ship.
+
+Adding a rule is what happens after a defect got through, and `prompted_by` is
+where that defect is named. The steps are an entry in the rule file and a row in
+`tests/unit/test_invariants.py`, which carries per rule the one-line mistake it
+must refuse and the corrected form of the same line it must let through. A rule
+with no row there is refused by the suite, because a rule that has never been
+seen to fire is one whose behaviour nobody knows. Every rule in the file today
+was placed ahead of the defect rather than after it, and each one says so in its
+own `prompted_by` field rather than leaving a reader to assume otherwise.
+
+What it does not cover: everything a token-level pattern match misses. Each rule
+states its own edge in the file and the run prints those edges on every pass, so
+a green result is read as a floor. Several rules read one directory, one of them
+reads a directory that does not exist in this tree yet, and one carries
+exemptions whose reasons are printed with the count. None of them reads what a
+value is, only how a line is written.
 
 None of the three is a security review, and the bandit rules in the linter's
 selection are pattern matches over source text rather than an analysis. A rule
 set of this shape is a floor and can be evaded by anyone who wants to.
 
 None of them is a mutation run, and that one now exists without being a gate. It
-is a sixth command and it refuses nothing:
+is a seventh command and it refuses nothing:
 
     uv sync --locked --group mutation
     mutmut run
@@ -137,7 +176,7 @@ left to the schedule. And it covers the verdict surface rather than the package;
 `[tool.mutmut]` in `pyproject.toml` names what is mutated and why the generators
 are outside it.
 
-None of them is a coverage bar, and that one is a gate. It is a seventh command,
+None of them is a coverage bar, and that one is a gate. It is an eighth command,
 in three parts because the measurement and the judgement are separate things:
 
     python -m coverage run --source=src/eichstelle -m pytest
