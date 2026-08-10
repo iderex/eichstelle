@@ -156,20 +156,36 @@ at all, so an adapter needing one would not work there.
 
 You do not require a display. The same reason: nothing is guaranteed to have one.
 
-None of these is enforced against an adapter today. Record 0010 says of itself
-that until issues #49 and #52 land it is prose. What has changed since this
-paragraph was written is the environment rather than the enforcement: the
-`verify` workflow now runs this project's own suite inside an empty network
+One of these is refused against an adapter, in one place, and the other two are
+not refused anywhere.
+
+The `verify` workflow runs this project's own suite inside an empty network
 namespace, and says so out loud.
 
-    grep -rn -i network .github/workflows/ | wc -l
-    5
+    git grep -n 'unshare --net' -- .github/workflows/verify.yml
+    .github/workflows/verify.yml:150:        # The sandbox is an empty network namespace: `unshare --net` gives the
+    .github/workflows/verify.yml:171:          sudo unshare --net -- bash -c '
 
 So the suite runs where there is no egress, which is the environment an adapter
-has to work in, and nothing in that arrangement inspects an adapter. An adapter
-that opens a socket will not be caught here. These are the contract, and
-breaking them is a defect in that adapter rather than something this project
-detects for you.
+has to work in. Beside that, the offline guard reaches a process the run started
+rather than only the process that loaded it, which is asserted rather than hoped
+for:
+
+    git grep -n 'def test_the_denial_reaches_a_process_the_suite_starts' -- tests
+    tests/e2e/test_architecture_conformance.py:269:def test_the_denial_reaches_a_process_the_suite_starts() -> None:
+
+An adapter started inside that run is such a process, so a Python adapter
+reaching outbound gets an exception at the call rather than a connection. Read
+the bound with it. The guard is on `PYTHONPATH` for a checked run and for nothing
+else, so an ordinary `python -m pytest` and an operator's own run install it
+nowhere; it replaces functions in Python's socket module, so an adapter that is
+not a Python program is outside it entirely; and the namespace is the workflow's
+Linux runner. Nothing anywhere inspects an adapter's source for any of the three.
+
+The other two prohibitions have nothing behind them at all. No route reads where
+an adapter wrote, and no route asks whether it wanted a display. These are the
+contract, and breaking them is a defect in that adapter rather than something
+this project detects for you.
 
 ## Capabilities
 

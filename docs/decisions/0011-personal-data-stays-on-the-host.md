@@ -51,13 +51,49 @@ the suite does not install anything.
 The rule gets its teeth from the test suite running with outbound network access
 denied, because a rule of this kind that is merely stated is a rule that decays
 the first time somebody adds a convenient lookup. Record 0010 is where the
-headless shape of this project is argued and it says of itself that the mechanism
-is owed: issue #49 carries the lint rule that refuses a test which opens a
-socket, and issue #52 carries the conformance test that runs the whole default
-suite with the network denied and asserts it passes. Neither has landed. No
-workflow in this repository runs the suite at all today, with or without a
-network, and until #49 and #52 are in the tree this section is a design rule that
-nothing enforces.
+headless shape of this project is argued, and the two mechanisms it names as owed
+are in the tree, as is a workflow that runs the suite:
+
+    $ git grep -n 'id = "no-socket-device-or-display-in-the-suite"' -- tools/invariants.toml
+    tools/invariants.toml:85:id = "no-socket-device-or-display-in-the-suite"
+
+    $ git grep -n 'def test_the_default_suite_passes_with_outbound_network_denied' -- tests
+    tests/e2e/test_architecture_conformance.py:157:def test_the_default_suite_passes_with_outbound_network_denied(
+
+    $ grep -c 'python -m pytest' .github/workflows/verify.yml
+    1
+
+Four things hold this section up, and each of them is a floor rather than a
+proof. Reading any one of them as the whole rule is how a reader ends up
+believing more than has been established.
+
+The invariant rule, run as the `invariants` check, matches patterns against
+tracked test sources. Its own entry in `tools/invariants.toml` states its edge: a
+connection made through a library that wraps the socket module, or through
+`ctypes` against the platform's sockets library, passes it.
+
+The offline guard in `tests/e2e/offline/` replaces four functions in Python's
+socket module, so what it can see is what a Python process does. Its own
+docstring calls itself a floor and not a sandbox, and names what is outside it:
+a raw socket, a connection made through `ctypes`, and any subprocess that is not
+a Python interpreter.
+
+The conformance test asserts that the whole default suite passes with that guard
+loaded into every process of the run. That is a statement about what ran. A route
+no test takes is a route it says nothing about.
+
+The fourth is the strongest and it is not in this tree's own code. The `tests`
+checks run the suite inside an empty network namespace, so there is no route for
+anything in that process tree to take, whatever language it is written in and
+whichever of the three above it would have slipped past. What it does not cover:
+it runs on the workflow's Linux runner, so a run on another platform is outside
+it, and the install step ahead of it has ordinary network access because it has
+to fetch the locked set.
+
+So this section is enforced, and what is enforced is narrower than the sentence
+it opens with. What is refused is a socket the suite opens through Python, and a
+whole run given no route at all on one platform. Nothing measures whether the
+harness would reach the network if something gave it the chance.
 
 ### Operator audio and the working directories
 
@@ -165,10 +201,26 @@ identifiers to their own material, and a run over a directory of files nobody ha
 named is more awkward than one that just prints paths. That awkwardness is the
 mechanism, and softening it would remove the thing it does.
 
-This record is not enforced by anything at present. The harness does not exist
-yet, so nothing has been written that could violate it, and the checks that would
-refuse a violation are owed by issues #49 and #52. Read it as a design rule that
-the code has to be built to satisfy, and as prose until those two land.
+Part of this record is refused by a machine and part of it is not, and collapsing
+the two is how a reader ends up trusting the half that is prose. The
+outbound-connection rule is held by the four things that section names, each with
+its bound written beside it there.
+
+The rest of the record has one check between it, and that check is narrower than
+the section it belongs to:
+
+    $ git grep -n 'def test_no_operator_path_reaches_the_record_by_default' -- tests
+    tests/unit/test_result_record.py:233:def test_no_operator_path_reaches_the_record_by_default(tmp_path: Path) -> None:
+
+It writes a record with the default settings and asserts that no source path
+reached it and that the header says so. It does not reach a diagnostic message
+that quotes a filename, where a temporary file was written, or any of the
+federation rules, which have no implementation for a check to read.
+
+Those are a design rule the code has to be built to satisfy, and the list of
+conveniences above is what that reading has to hold out against. A feature that
+uploaded a record would be caught by a person reading this record before it was
+built, or not at all.
 
 ## Status
 

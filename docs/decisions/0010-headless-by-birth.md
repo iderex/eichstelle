@@ -107,7 +107,26 @@ refuses the behaviour at run time. Neither alone is enough, because the lint is 
 pattern match that can be evaded and the conformance test only sees what actually
 ran.
 
-Until both land, this record is prose, and it should be read as prose.
+Both have landed. Record 0011 is where the pair is set out with the bound on
+each, alongside two further things that turned out to be carrying more of the
+no-network constraint than either of them. Read that section rather than a
+summary of it here, because a summary is what drifts.
+
+Two of the four constraints are asserted about the run itself:
+
+    git grep -n 'def test_no_default_suite_test_requires_a_display' -- tests
+    tests/e2e/test_architecture_conformance.py:170:def test_no_default_suite_test_requires_a_display(
+    git grep -n 'def test_the_suite_is_running_unprivileged' -- tests
+    tests/e2e/test_architecture_conformance.py:188:def test_the_suite_is_running_unprivileged() -> None:
+
+The display one asserts nothing on Windows, where there is no display variable to
+remove, and says so in its own docstring.
+
+Two things in this record are still prose. Nothing reads a run's output to see
+whether it stated which harnesses were left out of it, which is the section above
+and the half that section calls easiest to skip. And no test invokes software
+needing a license key, so the fourth constraint has nothing to refuse yet; it
+becomes a live question the moment issue #37 lands.
 
 ## Alternatives
 
