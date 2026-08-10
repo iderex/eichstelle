@@ -78,9 +78,16 @@ one of the three consumers this format exists for.
     python -m eichstelle.fixtures fixtures/
 
 It takes a directory and walks it for `*.json`, so a new fixture is covered by
-having been added rather than by being remembered. Exit 0 is every file read and
-valid, exit 1 is at least one refusal, exit 2 is a run that did not complete and
-whose result is therefore unknown.
+having been added rather than by being remembered. It does two things: it
+validates every fixture against the schema, and it regenerates every signal and
+holds it against the committed checksums. Exit 0 is every file read, every
+fixture valid and every signal hashing to what the manifest says; exit 1 is at
+least one refusal or at least one stimulus that moved; exit 2 is a run that did
+not complete and whose result is therefore unknown.
+
+A fixture set with no manifest is exit 2 rather than exit 0. The fixtures may
+all be well formed and nothing then records what their stimuli are, and
+reporting that as a clean check is the silent half of this command's own name.
 
 It reports everything it finds in one pass. Somebody writing their first fixture
 gets one list rather than five iterations.
@@ -92,9 +99,96 @@ green run here is what a green check there means.
 
 What that check asserts today is nothing, and it prints so rather than reporting
 green in silence. No fixture is tracked yet, so the job takes its empty branch,
-says it validated none, and warns that it made no assertion about correctness.
-The moment one fixture is tracked the validator runs and its exit code is the
-job's. `docs/ci-checks.md` is where the check is described alongside the others.
+says it validated none and verified no checksum, and warns that it made no
+assertion about correctness. The moment one fixture is tracked the command runs
+and its exit code is the job's. `docs/ci-checks.md` is where the check is
+described alongside the others.
+
+## The signal checksums
+
+A tone is reproducible because its description determines it. What an adapter is
+actually handed is the bytes some code produced from that description, and
+nothing in the fixture records which bytes anybody saw.
+
+So the hash of every fixture's rendered signal is committed, in one tracked
+file:
+
+    fixtures/checksums.txt
+
+One line per fixture, carrying the identifier, the revision and the hash, sorted
+so that a regeneration produces a diff naming exactly which signals moved. It is
+one file rather than a field inside each fixture for that reason: a field per
+fixture spreads the same information across the whole set and the movement stops
+being readable.
+
+The failure this prevents is not hypothetical and it is expensive. A numeric
+library changes a filter's coefficients in their last bits, every band-limited
+noise fixture shifts slightly, and every implementation appears to develop a
+small disagreement at once. Without the manifest the investigation starts by
+suspecting the implementations. With it, the run stops on the first fixture and
+says the stimulus changed.
+
+### What the hash covers
+
+The samples, and the format parameters that decide how those samples are read:
+the sample rate, the channel count, the frame count and the sample encoding. The
+encoding is `float64le` where the description states no `bit_depth` and
+`pcm_s<depth>le` where it states one, because the same tone written at sixteen
+bits and as floating point is two different sets of bytes in front of an
+adapter.
+
+### What it deliberately excludes
+
+Every container byte. WAVE carries no timestamp field, but writers add `LIST` and
+`INFO` chunks holding authoring metadata, and a hash over a container moves when
+a writer changes its mind about chunk layout. Two files differing only in chunk
+layout hash the same here, and that is the intended behaviour rather than a
+weakness: the fixture's claim is about the stimulus and not about a file.
+
+The consequence belongs in the same paragraph, because it bounds what a green
+verification means. The manifest proves nothing about any file on disk. It
+proves that regenerating the description yields the same samples, which is
+exactly what the failure above needs.
+
+### Where the comparison runs, and in which direction
+
+The manifest is the authority and the regenerated signal is the candidate. The
+verification happens before any adapter is invoked, so a run that would have
+proceeded on a different stimulus produces no number at all rather than a number
+that looks like a result. A mismatch names the fixture and shows both hashes.
+
+Three kinds of disagreement are reported and they are three rather than one,
+because they call for different responses. A hash that moved is a stimulus that
+changed. A fixture with no entry is one nothing is holding still. An entry with
+no fixture is a line left behind by a deletion, and leaving it would hold a
+later fixture reusing that identifier against a stranger's bytes.
+
+### Moving it
+
+    python -m eichstelle.fixtures --write-checksums fixtures/
+
+That is the whole of it: one command, which regenerates, prints what moved and
+writes. A pull request touching `fixtures/checksums.txt` says in its body why the
+signals moved and what was checked to establish that the new bytes are the right
+ones. Nothing refuses a pull request that skips that sentence; it is a rule
+people follow, and the command printing what moved is there so the sentence is
+cheap to write.
+
+### The edge
+
+The comparison is exact to the last bit of the encoding, which is what makes a
+coefficient change visible at all. That sensitivity has no floor. The generators
+call `math.sin`, `math.log` and `math.tan`, which CPython delegates to the
+platform's own maths library, and two libraries may round the last bit of a
+transcendental differently. A sample landing within one of those bits of a
+quantisation step would encode differently on the two platforms, and the
+mismatch would be reported in the same words as a real one.
+
+Whether that happens between the platforms this project supports is NOT MEASURED.
+It would be measured by regenerating on each and comparing the file, which is one
+command per platform and is the same command as above. Nothing here hides the
+case: a mismatch prints the fixture and both hashes, which is what somebody
+comparing two platforms needs.
 
 ## What it refuses, and why each one
 

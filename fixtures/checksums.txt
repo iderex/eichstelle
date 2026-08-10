@@ -1,0 +1,14 @@
+# eichstelle-signal-checksums-1
+#
+# One line per fixture: identifier, revision, and the hash of the samples
+# its signal description renders to. The hash covers the samples and the
+# format parameters that decide how they are read, and no container byte.
+# docs/fixtures.md states exactly what it covers and what it excludes.
+#
+# This file is the authority and a regenerated signal is the candidate. It
+# is moved by one command, and a change to it is explained in the body of
+# the pull request that carries it: why the signals moved, and what was
+# checked to establish that the new bytes are the right ones.
+#
+#     python -m eichstelle.fixtures --write-checksums fixtures/
+

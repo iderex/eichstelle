@@ -78,15 +78,27 @@ than an overstatement. This job also runs the suite with ordinary network
 access, so the offline promise is the `tests` legs' and not this one's.
 
 **`fixtures`** validates every tracked fixture under `fixtures/` against the
-schema, using `python -m eichstelle.fixtures`. A failure is a fixture the
-validator refuses, which `docs/fixtures.md` lists by kind, or a run that could
-not complete and whose result is therefore unknown.
+schema and holds every fixture's regenerated signal against the committed
+checksums in `fixtures/checksums.txt`, using `python -m eichstelle.fixtures`. A
+failure is a fixture the validator refuses, which `docs/fixtures.md` lists by
+kind, or a stimulus whose hash does not match the manifest, or a run that could
+not complete and whose result is therefore unknown. A stimulus that moved names
+the fixture and shows both hashes, so an investigation starts at the signal
+rather than at the implementations.
 
-Today it validates nothing, because no fixture is tracked yet, and it says so in
-its own output rather than reporting green in silence. It also prints that it
-verified no signal checksums, which is the other half of what its name promises
-and which issue #25 owes. Read this check green today as "there was nothing to
-refuse", not as "the fixture set is sound".
+Today it validates nothing and verifies nothing, because no fixture is tracked
+yet, and it says both in its own output rather than reporting green in silence.
+The manifest is tracked and empty, which is the same statement from the other
+side: it holds every fixture there is. Read this check green today as "there was
+nothing to refuse", not as "the fixture set is sound".
+
+What the checksum half does not cover is worth knowing before it is trusted. It
+compares regenerated samples against a recorded hash, so it says nothing about
+any file on disk, and it is exact to the last bit of the encoding, which means a
+platform whose maths library rounds a transcendental differently can report a
+mismatch that is not a change to this repository. Whether that happens between
+the platforms this project supports is not measured; `docs/fixtures.md` says how
+it would be.
 
 **`invariants`** runs `tools/invariants.py`, which matches this project's own
 invariants against the tracked tree. A failure is a line breaking one of them,
