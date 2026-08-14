@@ -8,12 +8,12 @@ convention in circulation, and picking the wrong one moves every result by a
 fixed amount for a reason that has nothing to do with the psychoacoustic model
 under test.
 
-That is the failure this file exists to prevent. A constant offset on every
-fixture is a real finding worth reporting, and it is worthless if the suite
-cannot tell it apart from a model disagreement.
+A constant offset on every fixture is a real finding worth reporting, and it is
+worthless if the suite cannot tell it apart from a model disagreement. That is
+the failure the conventions below prevent.
 
-This file fixes both conventions and works each one through with numbers. It
-describes what a value means and not how a generator is written.
+Both are fixed here and worked through with numbers. What a value means is the
+subject; how a generator is written is not.
 `src/eichstelle/signals/generator.py` produces the sinusoid, the
 amplitude-modulated sinusoid and the frequency-modulated sinusoid, and is held
 to what is written here.
@@ -88,8 +88,8 @@ Continuing the example, at sixteen bits:
     653.7876027458528
 
 which is sample value 654 after rounding. That number is what a reader checks a
-generator against by hand, and it is the reason this section states a bit depth
-rather than leaving the mapping implied.
+generator against by hand, and it is why the bit depth is stated above: leave it
+implied and the mapping cannot be checked at all.
 
 ## The level convention for a modulated signal
 
