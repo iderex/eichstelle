@@ -15,9 +15,8 @@ opening a pull request that assumes otherwise.
 
 ## What this project will not accept
 
-Four rules. Each of them has a reason that is written down somewhere else, and
-each of them is easier to read here than to discover in a rejected pull
-request.
+The reason behind each rule below is written down somewhere else, and each is
+easier to read here than to discover in a rejected pull request.
 
 No audio file is committed. Reference signals are generated from their
 parameters at run time and never shipped as bytes in this tree. Issue #6 is the

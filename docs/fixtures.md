@@ -10,8 +10,8 @@ The schema is the authority for the shape:
 
     src/eichstelle/schema/fixture-1.schema.json
 
-It is a file rather than a description of a file, so an implementation maintainer
-who wants to run their own code against this fixture set can read it without
+It is a file and not a description of one, so an implementation maintainer who
+wants to run their own code against this fixture set can read it without
 installing anything and without reading any Python. Decision record 0004 in
 `docs/decisions` is where the format is argued and `docs/calibration.md` is what
 the levels in a signal description mean.
@@ -332,5 +332,6 @@ A published schema version is never edited. The version rises when a change
 would make a currently valid fixture invalid, or when a new required field is
 added; adding an optional field or a new signal kind does not raise it.
 
-The versions a build carries are read from the packaged schema directory rather
-than listed in the code, so publishing version 2 is adding a file.
+A build reads the versions it carries from the packaged schema directory, and no
+list of them exists in the code. Publishing version 2 is therefore adding a
+file.
