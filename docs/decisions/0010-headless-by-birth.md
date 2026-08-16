@@ -9,7 +9,7 @@ something that is.
 
 ## Context
 
-This is a birth requirement rather than a later hardening step, because
+This is a birth requirement and not a later hardening step, because
 retrofitting it is not possible. A suite whose tests quietly assume a soundcard,
 a graphics context, an installed MATLAB or an internet connection has those
 assumptions distributed through hundreds of files by the time anyone notices, and
@@ -45,14 +45,14 @@ requiring a license key is invoked.
 These run all the way back into the design, which is why this is a decision and
 not a policy note.
 
-It is the reason the adapter boundary is a process and a pair of files rather
+It is the reason the adapter boundary is a process and a pair of files and not
 than an import, in record 0006. A process boundary is what lets the whole harness
 be exercised end to end by a fake adapter that is a short script with no
 dependencies, on a runner with no scientific stack and no license behind it. An
 in-process interface would have made the harness untestable without the very
 things it exists to be independent of.
 
-It is the reason reference signals are generated rather than fetched. A run with
+It is the reason reference signals are generated and never fetched. A run with
 no network cannot download a stimulus, so the stimulus has to follow from a
 recipe the tree carries.
 
@@ -78,7 +78,7 @@ The naming rule matters as much as the separation. A job called "integration"
 tells a reader nothing, and a reader who cannot tell what a job needs will
 eventually assume it needs nothing. A job called "needs a MATLAB license" cannot
 be misread. The harness name states its requirement in plain words, and that is a
-rule about the name rather than a suggestion about it.
+rule about the name and not a suggestion about it.
 
 ### The run says what it did not cover
 
@@ -97,7 +97,7 @@ A sentence in a decision record is not a rule. The rule is in milestone 6.
 Issue #49 carries the lint rule that refuses a test in the default suite which
 opens a socket, opens a device, or requires a display, and the rule lands with
 the deliberate violation it was shown to refuse. That is the check that makes
-this record enforceable rather than advisory.
+this record enforceable and not advisory.
 
 Issue #52 carries the conformance test that runs the whole default suite with
 outbound network access denied and asserts it passes, and the test that asserts
@@ -109,7 +109,7 @@ ran.
 
 Both have landed. Record 0011 is where the pair is set out with the bound on
 each, alongside two further things that turned out to be carrying more of the
-no-network constraint than either of them. Read that section rather than a
+no-network constraint than either of them. Read that section instead of a
 summary of it here, because a summary is what drifts.
 
 Two of the four constraints are asserted about the run itself:
@@ -132,7 +132,7 @@ becomes a live question the moment issue #37 lands.
 
 Allow network access in the gate and rely on discipline. Rejected because a test
 that reaches the network passes on the author's machine and fails on somebody
-else's, and because the failure surfaces months later as flakiness rather than as
+else's, and because the failure surfaces months later as flakiness and not as
 a refusal.
 
 Allow the licensed and hardware-bound paths into the default gate and skip them
@@ -140,7 +140,7 @@ when their requirement is absent. Rejected because a skipped test that reports a
 part of a passing run is the mechanism by which a suite stops meaning anything. A
 green run containing silently skipped legs is worse than a red one.
 
-Make it a policy note in the contributing guide rather than a decision with
+Make it a policy note in the contributing guide instead of a decision with
 checks behind it. Rejected because the four constraints have architectural
 consequences that other decisions already depend on, and a note is not something
 another record can rest on.
@@ -150,7 +150,7 @@ another record can rest on.
 Whole classes of test are unavailable in the gate, and the answers they would
 have given are not available either. This suite cannot assert, in its default
 run, that a generated WAVE file plays back at the level it claims. That is a real
-gap and it is named here rather than left for a reader to discover.
+gap and it is named here, so no reader has to discover it.
 
 The separate harness has to be run by someone, deliberately, or its results are
 stale. Nothing in the default gate will remind anyone, which is the cost of it

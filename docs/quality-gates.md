@@ -8,7 +8,7 @@ workflow that issue #17 added:
 
 It runs exactly the commands below, so a green run locally and a green check on
 a pull request mean the same thing. If the two ever diverge the workflow is
-wrong rather than this list. `docs/ci-checks.md` names the checks it produces
+wrong, and not this list. `docs/ci-checks.md` names the checks it produces
 and says what a failure of each one means.
 
 Install the development tools first. They are declared in the `dev` dependency
@@ -28,7 +28,7 @@ says which is which.
 
 Refusing mode. Any match fails, and there is no advisory setting. The rule
 selection is written out in `[tool.ruff.lint]` in `pyproject.toml` with a
-comment on each entry naming the defect class it catches, rather than inherited
+comment on each entry naming the defect class it catches, and never inherited
 from whatever ruff's default is in the release a contributor happens to have.
 
 Locally, `ruff check --fix` writes the fixes the tool can make on its own,
@@ -66,7 +66,7 @@ reported.
 
 Strict from the first commit, because strictness is affordable on an empty tree
 and unaffordable on a full one. An import with no type information is an error
-rather than silence, which is what forces an untyped dependency to arrive as a
+and not silence, which is what forces an untyped dependency to arrive as a
 declared per-module relaxation naming the library and the reason, instead of
 quietly turning everything it touches into `Any`.
 
@@ -90,7 +90,7 @@ outbound network. `docs/ci-checks.md` names those checks.
 What it does not catch is a test that simply contains no assertion. pytest has
 no mechanism for that. The configuration promotes pytest's return-not-None
 warning to an error, which catches a test that computes a value and returns it
-instead of asserting on it, and that is the nearest thing available rather than
+instead of asserting on it, and that is the nearest thing available, not
 the thing itself.
 
 None of the three refuses a tracked audio file. That is a fifth command:
@@ -98,7 +98,7 @@ None of the three refuses a tracked audio file. That is a fifth command:
     python tools/refuse_tracked_audio.py
 
 It reads the tracked tree, refuses a path by extension and independently by
-leading bytes, and exits 2 rather than 0 on anything that stops it completing.
+leading bytes, and exits 2, never 0, on anything that stops it completing.
 Issue #6 is the decision it enforces and issue #19 is where it was built and
 where it became a check name. Like the three above, a pull request runs it:
 
@@ -129,7 +129,7 @@ document does not list them: the file is the authority and a second copy here
 would drift against it. What each entry has to declare is the part worth stating
 outside the file, because it is what makes a red check answerable. A rule names
 the decision it comes from, the mistake it exists to catch, its own edge, and
-what prompted it. The loader refuses a rule that leaves out any of those rather
+what prompted it. The loader refuses a rule that leaves out any of those, and never
 than running it, so a pattern with no explanation beside it cannot ship.
 
 Adding a rule is what happens after a defect got through, and `prompted_by` is
@@ -138,8 +138,8 @@ where that defect is named. The steps are an entry in the rule file and a row in
 must refuse and the corrected form of the same line it must let through. A rule
 with no row there is refused by the suite, because a rule that has never been
 seen to fire is one whose behaviour nobody knows. Every rule in the file today
-was placed ahead of the defect rather than after it, and each one says so in its
-own `prompted_by` field rather than leaving a reader to assume otherwise.
+was placed ahead of the defect and not after it, and each one says so in its
+own `prompted_by` field, so no reader is left to assume otherwise.
 
 What it does not cover: everything a token-level pattern match misses. Each rule
 states its own edge in the file and the run prints those edges on every pass, so
@@ -149,7 +149,7 @@ exemptions whose reasons are printed with the count. None of them reads what a
 value is, only how a line is written.
 
 None of the three is a security review, and the bandit rules in the linter's
-selection are pattern matches over source text rather than an analysis. A rule
+selection are pattern matches over source text and not an analysis. A rule
 set of this shape is a floor and can be evaded by anyone who wants to.
 
 None of them is a mutation run, and that one now exists without being a gate. It
@@ -166,13 +166,13 @@ they are not running. The last command is the only one whose exit code means
 anything: zero whatever the score is, and 2 when the run produced no score,
 because a mutation run that stopped running leaves the last number standing and
 looks exactly as green as one that succeeded. Issue #48 is where that asymmetry
-is argued, `.github/workflows/mutation.yml` runs it on a schedule rather than on
+is argued, `.github/workflows/mutation.yml` runs it on a schedule and not on
 a pull request, and `docs/measurements/mutation-score.md` holds the numbers and
 what a low one does and does not mean.
 
 Two things it does not do. It does not run on Windows: mutmut refuses to start
 there and says so, so this measurement is taken inside a Linux environment or
-left to the schedule. And it covers the verdict surface rather than the package;
+left to the schedule. And it covers the verdict surface and not the package;
 `[tool.mutmut]` in `pyproject.toml` names what is mutated and why the generators
 are outside it.
 

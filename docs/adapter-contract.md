@@ -77,7 +77,7 @@ Write it to `result_path`. An object.
 | `protocol_version` | integer | Echo `1`. |
 | `status` | string | `ok`, `unsupported` or `error`. |
 | `diagnostic` | string | Free text for a human reading a failure. Required, may be empty. Nothing branches on it. |
-| `fixture_id` | string | Echo the job's, so a result written to the wrong path is caught rather than misattributed. Required when `status` is `ok`. |
+| `fixture_id` | string | Echo the job's, so a result written to the wrong path is caught and never misattributed. Required when `status` is `ok`. |
 | `values` | array of decimal strings | Your answer. Required and non-empty when `status` is `ok`, and empty when it is not. |
 | `unit` | string | What the values are in. Required when `status` is `ok`. |
 | `edition` | integer | The edition you actually answered against. Required when `status` is `ok`. |
@@ -99,7 +99,7 @@ The schema is `src/eichstelle/schema/adapter-result-1.schema.json`.
 `ok` means you computed the metric and `values` is the answer.
 
 `unsupported` means you do not claim this metric, or you do not claim this
-edition of it, and you are declining rather than failing.
+edition of it, and you are declining, not failing.
 
 `error` means you tried and could not, and `diagnostic` says why.
 
@@ -168,14 +168,14 @@ namespace, and says so out loud.
 
 So the suite runs where there is no egress, which is the environment an adapter
 has to work in. Beside that, the offline guard reaches a process the run started
-rather than only the process that loaded it, which is asserted rather than hoped
+and not only the process that loaded it, which is asserted rather than hoped
 for:
 
     git grep -n 'def test_the_denial_reaches_a_process_the_suite_starts' -- tests
     tests/e2e/test_architecture_conformance.py:269:def test_the_denial_reaches_a_process_the_suite_starts() -> None:
 
 An adapter started inside that run is such a process, so a Python adapter
-reaching outbound gets an exception at the call rather than a connection. Read
+reaching outbound gets an exception at the call and never a connection. Read
 the bound with it. The guard is on `PYTHONPATH` for a checked run and for nothing
 else, so an ordinary `python -m pytest` and an operator's own run install it
 nowhere; it replaces functions in Python's socket module, so an adapter that is
@@ -184,7 +184,7 @@ Linux runner. Nothing anywhere inspects an adapter's source for any of the three
 
 The other two prohibitions have nothing behind them at all. No route reads where
 an adapter wrote, and no route asks whether it wanted a display. These are the
-contract, and breaking them is a defect in that adapter rather than something
+contract, and breaking them is a defect in that adapter and not something
 this project detects for you.
 
 ## Capabilities
@@ -238,7 +238,7 @@ It asks once per run, before any fixture is invoked, and it decides every pair
 of fixture and adapter against the answer. A pair you did not claim is recorded
 as unsupported with the reason, and you are never invoked for it.
 
-The reasons are separate rather than one shared decline, because they are
+The reasons are kept separate, and are not one shared decline, because they are
 different statements about your implementation: `metric_not_declared`,
 `edition_not_declared`, `sample_rate_not_accepted`,
 `field_condition_not_declared` and `calibration_convention_not_declared`.
@@ -251,7 +251,7 @@ broken. It was asked questions it never claimed to answer, and each one became a
 red line with your name on it.
 
 Declaring narrowly costs nothing. A metric you do not claim is reported as
-coverage rather than as correctness. Adding a claim later is one line.
+coverage and never as correctness. Adding a claim later is one line.
 
 There is a difference the report depends on: an error from a capability you
 DECLARED is a stronger finding than a decline from one you did not, and the
@@ -260,7 +260,7 @@ worth anything.
 
 ### Absent means none, not all
 
-An optional field left out is a claim of NONE rather than a claim of all. A
+An optional field left out is a claim of NONE and never a claim of all. A
 fixture asking for a free field against a metric whose entry names no
 `field_conditions` is unsupported and is not invoked.
 
@@ -269,7 +269,7 @@ different answers for the same signal, and an implementation handed a fixture it
 never said it could place would answer in whichever it defaults to. That value
 would arrive in the report looking like a disagreement about loudness.
 
-Same for the calibration convention. A convention you assume rather than accept
+Same for the calibration convention. A convention you assume instead of accept
 moves every value you produce, in one direction, invisibly.
 
 `sample_rates` is enumerated and not a range, because a range has to be
@@ -291,7 +291,7 @@ plausible number.
 ### If you cannot answer
 
 An adapter that fails the capability query is unusable, and the run says so
-ONCE, against the adapter, rather than failing every fixture separately. A
+ONCE, against the adapter, and does not fail every fixture separately. A
 declaration the schema refuses is the same case: nothing partial is taken from
 it.
 
@@ -300,7 +300,7 @@ it.
 The three declaration fields were specified here by issue #34, and two of them,
 `sample_rates` and `upstream_version`, became required after protocol version 1
 was published. The rule below says adding a required field raises the version.
-It was not raised, and the reason is written down rather than left out: until
+It was not raised, and the reason is written down and not left out: until
 this change nothing in this project ever asked an adapter for its capabilities,
 so no adapter could have been written against the declaration in a way that ran.
 The versioning rule protects an adapter author who has something working, and on
@@ -374,7 +374,7 @@ When the version rises, the schema for the old version stays in the tree
 unedited, exactly as it was published, and the harness keeps writing version 1
 jobs to adapters that declare only version 1 for at least one release after the
 new one appears. An adapter author gets a release to move, and finds out by
-reading a changelog rather than by a run failing.
+reading a changelog and not by a run failing.
 
 None of that is built. There is one version, there is no negotiation and no
 adapter has ever been run by this project. What is written here is the rule that

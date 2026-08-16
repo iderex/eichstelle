@@ -44,15 +44,15 @@ Parity means the same kind of refusal, not the same tool. The other board is a
 compares numbers. Copying its checks verbatim would produce jobs that refuse
 nothing here.
 
-What transfers is the shape: analyser output as an error rather than a warning,
+What transfers is the shape: analyser output as an error and not a warning,
 a coverage bar on the surface where a silent wrong answer does the harm,
-mutation testing reported rather than enforced, invariants as lint rules, and a
+mutation testing reported and never enforced, invariants as lint rules, and a
 fuzzing target on every parser that reads untrusted input.
 
 ## Parity already met
 
 Five of the target's checks have run here since the first commit. That is
-recorded as observed rather than assumed, and the observation is this:
+recorded as observed and not assumed, and the observation is this:
 
     $ git ls-files .github/workflows
     .github/workflows/codeql.yml
@@ -72,14 +72,14 @@ recorded as observed rather than assumed, and the observation is this:
 
 A tracked file proves a workflow exists; the run counts prove it has actually
 executed, which is the part a reader should want. The names in that second
-output are what the runs reported themselves as, quoted as evidence rather than
+output are what the runs reported themselves as, quoted as evidence and not
 restated as a list this document maintains.
 
 Two of the seven files are not among the five. `codeql.yml` is the static
 analysis row of the map below, landed since. `verify.yml` is this repository's
 own gate, which has no single counterpart on the target board and is not a
 parity claim at all. The second output is a count taken on one day and it moves
-with every run, including runs of those two, so re-run it rather than reading it
+with every run, including runs of those two, so re-run it instead of reading it
 as current.
 
 The five, matched by subject: the sign-off gate, dependency review, the
@@ -103,8 +103,8 @@ reason does not belong in this document.
 | Static analysis into the code scanning view | Transfers directly, no deviation, because the tooling supports this language | #50 |
 | Fuzzing the authentication parsers | Fuzzing with new targets, because the untrusted bytes enter elsewhere here: the fixture parser, the result record parser, the adapter result parser and the audio file reader | #51 |
 | Architecture conformance tests carried inside the ordinary suite, as #52 records of that board | The same mechanism over this project's own structure, including the headless promise, because a structural rule left to a person to check is a rule that stops being checked | #52 |
-| Pull-request hygiene and the artefact bill of materials | Transfers in form with a different artefact described, because what ships here is a Python distribution and a fixture set rather than a plugin package, and the hygiene half deliberately does not duplicate the sign-off gate because that gate is already at parity and two checks on one property are two things to keep in step | #53 |
-| Scheduled end-to-end run against real providers | Transfers in purpose and not in subject: the fixture set against the real implementations. Scheduled rather than required in both places, because it depends on third parties whose availability is not this project's to guarantee | #54 |
+| Pull-request hygiene and the artefact bill of materials | Transfers in form with a different artefact described, because what ships here is a Python distribution and a fixture set and not a plugin package, and the hygiene half deliberately does not duplicate the sign-off gate because that gate is already at parity and two checks on one property are two things to keep in step | #53 |
+| Scheduled end-to-end run against real providers | Transfers in purpose and not in subject: the fixture set against the real implementations. Scheduled and not required in both places, because it depends on third parties whose availability is not this project's to guarantee | #54 |
 | The format gate | Transfers directly, no deviation, with the formatter chosen in #15 and run in check mode in the gate | #15 |
 | The license-header conformance test | Transfers, and is blocked. This repository has no license, so there is no header to conform to. See the section below | blocked on #1 |
 
@@ -118,7 +118,7 @@ Three of the target's checks have no counterpart here, and the reason is the
 same for all three: this project ships no plugin into a host application.
 
 The publish pipeline checks, the manifest freshness check and the runtime floor
-build are recorded as deliberate absences rather than as omissions. Milestone 8
+build are recorded as deliberate absences and never as omissions. Milestone 8
 says what this project's release checks are instead, and nothing here should be
 read as a promise that they will eventually appear.
 
@@ -131,11 +131,11 @@ guess.
 
 Its dependency is the first entry of issue #1, which is a maintainer decision
 and is open. It is recorded here so that the absence is visible in the map
-rather than discovered later by somebody wondering why the row is missing.
+and is not discovered later by somebody wondering why the row is missing.
 
 ## Triaging what an analyser finds
 
-Three of the checks in the map above report into the code scanning view rather
+Three of the checks in the map above report into the code scanning view and not
 than failing a run, and the rule for what happens to what they report is the
 same for all three.
 
@@ -159,7 +159,7 @@ looking for it.
 
 Nothing enforces this. No check counts open alerts, refuses a dismissal without
 a note, or fails a run when the drawer fills up, and there is no open issue that
-would add one. Read this section as a rule people follow rather than one the
+would add one. Read this section as a rule people follow and not one the
 tree refuses to break.
 
 ## What this document does not do

@@ -46,7 +46,7 @@ generates it, hashes it and compares. On a mismatch the run stops for that
 fixture and says what it expected, what it got, and that the two differ. It does
 not warn and continue, and it does not use the samples it generated.
 
-Continuing would destroy the measurement rather than degrade it. A disagreement
+Continuing would destroy the measurement, not degrade it. A disagreement
 between two implementations and a disagreement between two machines look
 identical in the output, and the second one masquerading as the first is a
 finding published against somebody's software for a reason that has nothing to do
@@ -73,7 +73,7 @@ matches.
 
 If the file is absent, the fixture reports itself as not run, with the reason
 that a licensed reference was not available, and the run says so in its summary.
-If the file is present and its checksum does not match, that is a refusal rather
+If the file is present and its checksum does not match, that is a refusal and not
 than a not-run, because a file under the expected name with unexpected contents
 is a stronger statement than an absent one.
 
@@ -92,7 +92,7 @@ short clip in a test, and not one in documentation.
 `tools/refuse_tracked_audio.py` is the check. It reads the tracked tree, refuses
 a path by extension and independently by leading bytes so that a renamed file is
 caught as well as a named one, and exits non-zero on anything that stops it
-completing rather than reporting a clean tree it did not manage to read. Issue
+completing, and never reports a clean tree it did not manage to read. Issue
 #19 is where it was built and issue #17 is where it becomes a check that runs on
 a pull request. Until #17 lands, nothing runs it automatically, and
 `docs/quality-gates.md` is the authority for that.
@@ -107,7 +107,7 @@ Commit generated signal files, produced once and checked in as bytes, so that
 every run uses identical samples with no generator involved. Rejected because it
 gives up the reviewability that is half the reason for this decision, and because
 it makes the fixture set large and its history larger. It also moves the
-reproducibility problem rather than solving it: the bytes are reproducible and
+reproducibility problem instead of solving it: the bytes are reproducible and
 the recipe that produced them is not recorded in a form anyone can check.
 
 Distribute generated signals as a release artefact, downloaded on first run.
@@ -130,14 +130,14 @@ making is not the one anybody asked for.
 
 Every stimulus is only as reproducible as the library that generates it, so the
 numeric behaviour of that library becomes part of the reference. The checksums
-make a change in it visible as a stopped run rather than as a shifted result,
+make a change in it visible as a stopped run and not as a shifted result,
 which is the trade this record accepts: the suite will sometimes refuse to run on
 a machine where it previously ran, and that refusal is the mechanism working.
 
 Noise is the hard case and it gets its own attention in issue #22. A pseudorandom
 sequence depends on an algorithm, a seed and a library version, none of which is
 visible in the output, so the seed and the generator algorithm are explicit
-fields of the signal description rather than defaults.
+fields of the signal description and never defaults.
 
 The fixture set cannot carry a real-world recording, because a recording cannot
 be generated from a recipe. That is a real limit on what this suite can test.

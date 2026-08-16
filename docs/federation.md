@@ -2,7 +2,7 @@
 
 Federation means publishing the results of a run so they can be compared with
 results other operators produced. This document is the design for it. No part of
-it is implemented, and the last section says why that is deliberate rather than
+it is implemented, and the last section says why that is deliberate and not
 late.
 
 ## What it is for
@@ -22,7 +22,7 @@ That value is real and it is the only reason to accept the risk below.
 
 This suite processes audio. Decision record 0011 works through why a sound
 recording is often personal data in the ordinary legal sense, and why the
-operator rather than this project is answerable for it. A publishing feature that
+operator, and not this project, is answerable for it. A publishing feature that
 is easy to turn on and hard to inspect is the mechanism by which such material
 leaves a machine without anybody deciding that it should.
 
@@ -45,9 +45,9 @@ This also means there is no route by which a shared checkout, a copied home
 directory or a container image carries publication with it. Somebody who clones a
 colleague's setup inherits no consent.
 
-A consequence worth stating rather than discovering: a scheduled or scripted run
+A consequence worth stating, so nobody discovers it instead: a scheduled or scripted run
 that wants to publish has to pass the flag every time, which makes the intent
-visible in the script rather than hidden in a file beside it.
+visible in the script and never hidden in a file beside it.
 
 ## The operator sees the payload, not a summary of it
 
@@ -83,7 +83,7 @@ Two further points about the operator-derived half, for whoever implements this.
 A metric value computed from a recording is derived from personal data, and
 derivation is not anonymisation, so the separate consent is about the numbers and
 not only about the paths. And the entry that carries such a result identifies its
-input by the identifier the operator assigned rather than by a filesystem path,
+input by the identifier the operator assigned and never by a filesystem path,
 which record 0011 already makes the default for the record itself.
 
 ## The payload, field by field
@@ -93,13 +93,13 @@ added, and that rule is the whole of the minimisation policy. There is no
 allowance for a field that is merely useful, or that a later feature might want.
 
 The payload is drawn from the result record described by
-`src/eichstelle/schema/result-record-1.schema.json`. It is a subset of it rather
+`src/eichstelle/schema/result-record-1.schema.json`. It is a subset of it and not
 than a new document, so a reader who knows the record knows this too.
 
 ### From the run's header
 
 `format_version`. Which record format the payload speaks, so a receiver written
-against an older one can tell what it is holding rather than guess.
+against an older one can tell what it is holding and does not have to guess.
 
 `started_at`. When the run happened, in UTC. Without it a result cannot be placed
 against an upstream release, which is most of what a reader wants to know.
@@ -127,7 +127,7 @@ that mostly failed.
 
 ### From each entry
 
-`fixture_id` and `fixture_revision`. What was run. A revision rather than an
+`fixture_id` and `fixture_revision`. What was run. A revision, not an
 identifier alone, because a fixture that moved is a different stimulus.
 
 `standard`, `part`, `edition`. What the expectation was taken under. Two

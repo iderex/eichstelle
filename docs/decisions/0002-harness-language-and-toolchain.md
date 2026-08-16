@@ -24,8 +24,8 @@ needs already live in that ecosystem. Reimplementing them elsewhere would put
 this project's own numerics in doubt at exactly the moment it is asking others to
 trust its numbers.
 
-The interpreter floor is 3.11 rather than an older version for two reasons, both
-stated here as claims about upstream rather than as measurements this project
+The interpreter floor is 3.11 and not an older version, for two reasons, both
+stated here as claims about upstream and not as measurements this project
 made. The CPython release schedule puts 3.10 at the end of its security support
 in October 2026, which is inside this project's first release horizon, and a
 suite whose whole value is reproducibility should not ask an operator to run an
@@ -38,7 +38,7 @@ A ceiling exists as well as a floor, because the scientific wheels this project
 depends on lag a new CPython release by months and an unbounded upper bound turns
 that lag into a broken install for whoever upgrades first. The ceiling and the
 comment giving its reason are set in the project metadata, which is the
-scaffolding issue's work rather than this record's.
+scaffolding issue's work and not this record's.
 
 uv is the dependency manager because the repository already installs it: the
 workflow-security audit job uses `astral-sh/setup-uv`, so choosing uv adds no new
@@ -87,7 +87,7 @@ is only reproducible to the extent that the library producing it is, so the
 signal checksums in milestone 3 exist to make a change in that behaviour visible
 as a stopped run rather than as a shifted result.
 
-The single static binary is lost, and it is a real loss rather than a detail. An
+The single static binary is lost, and it is a real loss, not a detail. An
 operator with no Python installed cannot run this suite today. Milestone 8 has to
 answer how that operator gets a working suite, and the answer is not "install
 Python first" unless that is written down as the answer.

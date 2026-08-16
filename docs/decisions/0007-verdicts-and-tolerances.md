@@ -52,7 +52,7 @@ relative bound on 0.02 sone is a band of one thousandth of a sone, which is a
 bound no implementation can meet and none needs to meet, because at that level
 nobody is claiming three significant figures. A `combined` tolerance says: use
 the fraction where the quantity is large enough for a fraction to mean something,
-and use a fixed band below that. It carries three numbers rather than one, and
+and use a fixed band below that. It carries three numbers and not one, and
 the floor is stated in the fixture like everything else.
 
 A tolerance is never zero and never negative. Zero is a claim of bit-exact
@@ -70,7 +70,7 @@ and it varies between metrics and between editions.
 The forms a fixture may declare are a percentile of the series, its maximum, its
 mean, or the series itself point by point with a per-point tolerance and a stated
 fraction of points permitted to exceed it. Anything else is a fixture asking for
-something the comparator does not do, and it is refused rather than approximated.
+something the comparator does not do, and it is refused and never approximated.
 
 A percentile is not one operation. Several interpolation conventions exist and
 two implementations using different ones will differ for a reason that has
@@ -131,7 +131,7 @@ context gives: the default is what gets used, the override is what gets
 forgotten, and a fixture that silently inherited a band from somewhere else
 cannot be reviewed by reading it.
 
-Tolerances derived from the standard's stated values by the harness rather than
+Tolerances derived from the standard's stated values by the harness and not
 written in the fixture. Rejected because it would put a reading of the standard
 into this repository, which record 0003 forbids, and because the standards state
 tolerances in prose that does not reduce to a table.
@@ -142,7 +142,7 @@ that crashed, and one that answered wrongly would then be reported identically,
 and the first of those is not a finding about the implementation at all.
 
 Folding `timed_out` into `errored`. Rejected because a timeout is the one outcome
-that is routinely the fault of the machine rather than the software, and a reader
+that is routinely the fault of the machine and not the software, and a reader
 looking at a scheduled run needs to tell a slow runner from a broken adapter
 without opening the log.
 
@@ -154,7 +154,7 @@ stopped running is exactly the kind of thing that goes unnoticed for a year.
 A numeric score per fixture instead of a verdict. Rejected because it invites
 aggregation into a single figure of merit per implementation, and a league table
 is the thing this project must not produce. The margin is recorded, in record
-0009, as a number beside the verdict rather than instead of it.
+0009, as a number beside the verdict and never instead of it.
 
 ## Consequences
 

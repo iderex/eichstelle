@@ -44,8 +44,8 @@ not only to the audio.
 
 Not for telemetry, not for update checks, not for error reporting, not for
 fetching fixtures and not for resolving a standard reference. Reference signals
-are generated from their parameters rather than downloaded, and an operator's
-licensed reference material is read from a directory they control rather than
+are generated from their parameters and never downloaded, and an operator's
+licensed reference material is read from a directory they control and not
 looked up.
 
 This claim carries a check. The default suite is run again as a child process
@@ -67,7 +67,7 @@ this page should not have to open a test file to find the limits. The guard
 replaces the socket calls a Python program reaches the network through. A raw
 socket, a connection made through `ctypes` against the platform's own sockets
 library, and a subprocess that is not a Python interpreter are all outside what
-it can see. So it is a floor on what the suite is permitted to reach rather than
+it can see. So it is a floor on what the suite is permitted to reach and not
 a sandbox. The `tests` legs on a pull request make the stronger statement, by
 running the suite inside an empty network namespace with nothing in it but
 loopback, and by proving there was egress to remove before removing it.
@@ -85,7 +85,8 @@ that wrote results or caches beside its own source is a suite whose outputs get
 committed by accident, and the accident would be a recording in a public
 repository.
 
-Two things about this are worth being exact about rather than reassuring.
+Two things about this are worth being exact about, and being reassuring about
+them would be worth less.
 
 The suite cannot read an operator's audio file at all today. There is no audio
 reader in the tree: what exists writes generated stimuli, and reading a file an
@@ -114,15 +115,15 @@ in the sense that matters: the field is absent unless somebody asked for it.
 How it is turned on, in the tree as it stands, is a single argument to the
 record writer, `operator_paths_included` in `src/eichstelle/record/record.py`,
 which defaults to false. With it false a source path handed to the writer is
-dropped rather than refused, so a caller that passes one produces a record
-without it rather than an error. With it true the path is written into the
+dropped and not refused, so a caller that passes one produces a record
+without it and never an error. With it true the path is written into the
 record. There is no command-line switch for it yet, because the command an
 operator types is still being built, and this document will be wrong about that
-sentence rather than about the default when it lands.
+sentence and not about the default when it lands.
 
 An operator debugging their own run on their own machine is the reason the
 setting exists at all. An operator who intends to send a record to somebody else
-has one thing to check rather than a file to audit.
+has one thing to check and not a file to audit.
 
 ## Publishing is something you do, per run, having seen it
 
