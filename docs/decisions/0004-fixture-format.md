@@ -20,11 +20,11 @@ project, and the implementations in scope live in Python and MATLAB with more
 languages likely later. JSON parses in the standard library of every one of them,
 MATLAB included, with no dependency and no ambiguity about types.
 
-A schema rather than a convention, because a fixture with a missing tolerance
+A schema and not a convention, because a fixture with a missing tolerance
 field is the exact shape of mistake that produces a green run proving nothing,
 and a schema refuses it before any code reads it.
 
-One fixture per file rather than a large catalogue file, because fixtures are
+One fixture per file and not a large catalogue file, because fixtures are
 added by different people over time and a single catalogue is a permanent merge
 conflict. It also makes a fixture citable by path, which is what a published
 result needs in order to name what it was produced against.
@@ -98,7 +98,7 @@ for different responses.
 
 ### Numbers
 
-Every field carrying a physical quantity is written as a decimal string rather
+Every field carrying a physical quantity is written as a decimal string and not
 than a JSON number. That covers `expected`, `tolerance`, and every physical
 parameter inside `signal` and `metric_parameters`: a frequency in hertz, a level
 in decibels, a duration in seconds, a modulation depth, a modulation rate.
@@ -119,7 +119,7 @@ digit. This is not a style preference: MATLAB's `jsondecode` maps object keys on
 struct field names and rewrites any key that is not a valid MATLAB identifier, so
 a hyphenated key silently arrives under a different name in one of the three
 consumers this format exists for. That is a claim about MATLAB's documented
-behaviour rather than something this project has measured.
+behaviour and not something this project has measured.
 
 ### Schema versioning
 
@@ -163,7 +163,7 @@ reason the fixture set exists at all.
 Every consumer converts the decimal strings itself before comparing anything.
 MATLAB receives them as character arrays and converts with `str2double`; Python
 converts with `decimal.Decimal` or `float`, and which of the two is used in the
-comparator is the comparator issue's decision rather than this one's.
+comparator is the comparator issue's decision and not this one's.
 
 JSON Schema's numeric keywords do not apply to strings, so a bound on a frequency
 or a level is expressed as a regular expression on its text rather than as

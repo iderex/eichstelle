@@ -4,7 +4,7 @@
 
 The output of a run is a machine-readable record, written as newline-delimited
 JSON with a run header on its first line and one entry per fixture and adapter
-pair after it, and everything a person reads is rendered from that file rather
+pair after it, and everything a person reads is rendered from that file and not
 than written by hand.
 
 ## Context
@@ -32,7 +32,7 @@ MATLAB included, with no dependency and no ambiguity about types. A project with
 two serialisation formats has two parsers to test and two sets of edge cases, and
 there is nothing here the second one would buy.
 
-Newline-delimited rather than one enclosing array because the file is written as
+Newline-delimited and not one enclosing array, because the file is written as
 the run proceeds. A run that is interrupted, killed or crashes leaves a file
 whose every complete line is readable, which is exactly the run whose partial
 results are most worth having. A single enclosing array is unreadable until its
@@ -58,7 +58,7 @@ so a fixture corrected later cannot be confused with the fixture as it was.
 
 The standard designation, the part and the edition the fixture applies under.
 
-The adapter identity, and the upstream version the adapter actually loaded rather
+The adapter identity, and the upstream version the adapter actually loaded and not
 than the version it declared. Issue #38 is where the difference between those two
 becomes a stopped run; the record carries the loaded one because that is the one
 the result is attributable to.
@@ -107,12 +107,12 @@ Those two sentences are one rule and it runs in both directions. Adding a field
 does not move the version, because a reader written against the older format
 ignores it and continues to be correct about everything else. Removing a field,
 renaming one, or changing what a value means does move the version, because a
-reader that does not notice would be silently wrong rather than silently
+reader that does not notice would be silently wrong and not silently
 incomplete.
 
 Within one major version of the harness the format does not change in a way that
 breaks a reader written against an earlier release in that line. Across a major
-version it may, and the version field is how a reader finds out rather than
+version it may, and the version field is how a reader finds out and not
 discovering it by misreading a number.
 
 A reader that refuses an unknown field is refusing a record produced by a newer

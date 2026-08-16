@@ -36,14 +36,14 @@ allowed at all.
 `schema_version` is which version of the fixture format the file speaks. It is an
 integer and the validator picks a schema by it. Write 1.
 
-`title` is one line, written for somebody reading a failure rather than for
+`title` is one line, written for somebody reading a failure and not for
 somebody browsing the set. "a 1 kHz sinusoid at 40 dB SPL" tells a reader looking
 at a red line what was in front of the implementation.
 
 `signal` describes the stimulus completely enough to regenerate it. No audio is
 committed here, so the description is the stimulus: whatever it does not say is
 not reproducible. The parameter set is closed per kind, so a name the generator
-does not accept is refused rather than silently ignored. `docs/calibration.md` is
+does not accept is refused and never silently ignored. `docs/calibration.md` is
 what the levels in it mean.
 
 `metric` and `metric_parameters` are the quantity and the arguments it takes.
@@ -95,9 +95,9 @@ digit, and the justification says so and quotes the precision.
 The stimulus itself has a spread. A band-limited noise made with a realisable
 filter has passband ripple, and the level it actually achieves varies with the
 filter. Where the fixture's own signal has a spread, the tolerance carries it,
-and the justification states the mechanism rather than the size.
+and the justification states the mechanism and not the size.
 
-The comparison is between implementations rather than against a target. The band
+The comparison is between implementations and not against a target. The band
 is what counts as agreement for this metric at this level, argued from the
 metric, and the justification says what a spread that size would mean.
 
@@ -188,8 +188,8 @@ prints what moved. The second is the check: it validates against the schema and
 then regenerates every signal and holds it against those recorded hashes. Exit 0
 is every file read, every fixture valid and every stimulus where it was; exit 1
 is at least one refusal or at least one stimulus that moved; exit 2 is a run
-that did not complete. It reports everything it finds in one pass rather than
-stopping at the first problem, so a first fixture gets one list rather than five
+that did not complete. It reports everything it finds in one pass instead of
+stopping at the first problem, so a first fixture gets one list instead of five
 iterations.
 
 A fixture with no line in the manifest does not pass the check. That is the

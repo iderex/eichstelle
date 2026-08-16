@@ -66,7 +66,7 @@ number is not a secret the harness keeps to itself.
 
 `protocol_version`, echoed.
 
-`fixture_id`, echoed, so a result written to the wrong path is detected rather
+`fixture_id`, echoed, so a result written to the wrong path is detected and not
 than misattributed.
 
 `status`, one of `ok`, `unsupported` or `error`.
@@ -85,7 +85,7 @@ the harness and nothing branches on it.
 
 The adapter may write exactly three statuses. `ok` means it computed the metric
 and `values` is the answer. `unsupported` means it does not claim this metric, or
-this edition, and is declining rather than failing. `error` means it tried and
+this edition, and is declining, not failing. `error` means it tried and
 could not, and `diagnostic` says why.
 
 Four further outcomes are recorded by the harness, and an adapter cannot write
@@ -107,14 +107,15 @@ standard editions it claims. The harness reads that once per run and reports a
 metric the adapter does not claim as `unsupported` without ever invoking it for
 that fixture.
 
-Capabilities travel through the same job and result files as a measurement rather
+Capabilities travel through the same job and result files as a measurement, and
+not
 than through a second command-line protocol, so an adapter author implements one
 contract and not two, and so the declaration is subject to the same validation.
 
 `unsupported` and `error` are different words for different states. An
 implementation that never claimed to compute roughness is not failing to compute
 roughness, and a report that says otherwise manufactures a disagreement out of
-nothing. This distinction is the reason capabilities exist as a mechanism rather
+nothing. This distinction is the reason capabilities exist as a mechanism and not
 than as documentation.
 
 ### Timeouts
@@ -142,7 +143,7 @@ in the harness's own language, so the MATLAB toolbox and every Fortran and C++
 codebase in the field are out by construction. It gives the harness no way to
 survive a segfault or a hang in code it does not control. And it would make the
 harness untestable without installing the very things it exists to be independent
-of, which is the reason it is rejected rather than merely disliked.
+of, which is the reason it is rejected and not merely disliked.
 
 A long-lived server process per implementation, spoken to over a socket.
 Rejected because it opens a port, which record 0010 forbids in the default gate,

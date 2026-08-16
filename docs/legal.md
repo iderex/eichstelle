@@ -12,7 +12,7 @@ instead, and what the reciprocal obligations are when this suite is run against
 somebody else's implementation. It is written for two readers who want different
 things: a researcher asking whether the fixtures can be used in a paper, and a
 legal department asking whether running this suite creates an exposure. Both
-answers are meant to be in front of them rather than at the end.
+answers are meant to be in front of them and not at the end.
 
 This document is not legal advice.
 
@@ -54,7 +54,7 @@ compilation, it is what the publisher sells, and a fixture set carrying values
 out of one is a fixture set nobody may copy. Where the line between those two
 runs in a particular case is an argument this project would be having at the
 margin, for a number it does not need, against a publisher with more time than
-it has. So the rule is drawn well short of the line rather than on it.
+it has. So the rule is drawn well short of the line and not on it.
 
 Decision record 0012 in `docs/decisions` is where that was decided and what it
 supersedes. `CONTRIBUTING.md` lists it among the things this project will not
@@ -67,7 +67,7 @@ and `tools/invariants.py` runs it as the `invariants` check on every pull
 request. It refuses a fixture declaring the `standard-clause` provenance and a
 small set of phrases that describe writing a value down out of a document.
 
-Read that as a floor rather than a guarantee, which is what the rule says about
+Read that as a floor and not a guarantee, which is what the rule says about
 itself in the file. It is a pattern match over source text. It cannot tell a
 citation from a transcription in prose, because an honest fixture names a
 standard designation in exactly the same words, and no token separates the two.
@@ -84,7 +84,7 @@ evidence each one needs.
 
 `generated-by-definition`. The value follows from the definition of the signal
 and the metric. One sone is the loudness of the reference tone because that is
-what a sone is. A definition is a fact rather than an expression, so nothing
+what a sone is. A definition is a fact and not an expression, so nothing
 here restricts reuse.
 
 `published-paper`. The value comes from the open literature, cited precisely
@@ -104,7 +104,7 @@ There is a fourth value, `standard-clause`, still present in schema version 1:
 
 No fixture here declares it and none may. A published schema version is not
 edited where the edit would refuse a fixture that is valid under it today, so
-removing the value is a version 2 and a migration rather than a deletion.
+removing the value is a version 2 and a migration, never a deletion.
 Decision record 0012 says this and `docs/adding-a-fixture.md` tells a
 contributor plainly that it is the one value the validator will accept and a
 reviewer will not.
@@ -139,7 +139,7 @@ The design for that is the licensed-reference slot, decided in decision record
 
 That slot is designed and is not built. Issue #31 is where it arrives, and until
 it does there is nothing in this tree for an operator to configure. The design is
-described here rather than left until then because it is the answer to the
+described here and not left until then, because it is the answer to the
 question this section's heading asks, and a legal reader deciding whether to
 depend on this project needs the answer before the code exists.
 
@@ -156,7 +156,7 @@ short clip in a test, and not one in a document. Decision record 0005 is where
 that was decided, and `tools/refuse_tracked_audio.py` is the check that refuses
 one, running as `no-tracked-audio` on every pull request.
 
-That check reads the index rather than the working tree, so what it judges is
+That check reads the index and not the working tree, so what it judges is
 what is being pushed. Its own bound is worth knowing: it matches a table of
 container extensions and leading-byte signatures, so a container nobody listed
 walks through it, and samples stored as text defeat both. It is aimed at the
@@ -175,7 +175,7 @@ running the suite against it is bound by that term, and this project's position
 on what its documentation should say about that is a maintainer decision, open
 as issue #1.
 
-This document names no implementation's license, and that is an absence rather
+This document names no implementation's license, and that is an absence and not
 than an omission. No adapter is in this tree:
 
     $ git ls-files adapters | wc -l

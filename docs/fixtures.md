@@ -78,7 +78,7 @@ one of the three consumers this format exists for.
     python -m eichstelle.fixtures fixtures/
 
 It takes a directory and walks it for `*.json`, so a new fixture is covered by
-having been added rather than by being remembered. It does two things: it
+having been added, and never by being remembered. It does two things: it
 validates every fixture against the schema, and it regenerates every signal and
 holds it against the committed checksums. Exit 0 is every file read, every
 fixture valid and every signal hashing to what the manifest says; exit 1 is at
@@ -90,14 +90,14 @@ all be well formed and nothing then records what their stimuli are, and
 reporting that as a clean check is the silent half of this command's own name.
 
 It reports everything it finds in one pass. Somebody writing their first fixture
-gets one list rather than five iterations.
+gets one list instead of five iterations.
 
 A pull request runs it too, as the `fixtures` check in
-`.github/workflows/verify.yml`, over the tracked files rather than over the
+`.github/workflows/verify.yml`, over the tracked files and not over the
 working tree. The command there is the one above, character for character, so a
 green run here is what a green check there means.
 
-What that check asserts today is nothing, and it prints so rather than reporting
+What that check asserts today is nothing, and it prints so instead of reporting
 green in silence. No fixture is tracked yet, so the job takes its empty branch,
 says it validated none and verified no checksum, and warns that it made no
 assertion about correctness. The moment one fixture is tracked the command runs
@@ -117,7 +117,7 @@ file:
 
 One line per fixture, carrying the identifier, the revision and the hash, sorted
 so that a regeneration produces a diff naming exactly which signals moved. It is
-one file rather than a field inside each fixture for that reason: a field per
+one file, and not a field inside each fixture, for that reason: a field per
 fixture spreads the same information across the whole set and the movement stops
 being readable.
 
@@ -154,11 +154,11 @@ exactly what the failure above needs.
 
 The manifest is the authority and the regenerated signal is the candidate. The
 verification happens before any adapter is invoked, so a run that would have
-proceeded on a different stimulus produces no number at all rather than a number
+proceeded on a different stimulus produces no number at all, and never a number
 that looks like a result. A mismatch names the fixture and shows both hashes.
 
-Three kinds of disagreement are reported and they are three rather than one,
-because they call for different responses. A hash that moved is a stimulus that
+Three kinds of disagreement are reported, and they are kept apart because they
+call for different responses. A hash that moved is a stimulus that
 changed. A fixture with no entry is one nothing is holding still. An entry with
 no fixture is a line left behind by a deletion, and leaving it would hold a
 later fixture reusing that identifier against a stranger's bytes.
@@ -260,11 +260,11 @@ So `random_algorithm` and `random_seed` are both required, and a description
 missing either is refused rather than defaulted.
 
 The generator this repository implements is `xoshiro256plusplus`, written out in
-`src/eichstelle/signals/noise.py` rather than taken from a library. That is the
+`src/eichstelle/signals/noise.py` and not taken from a library. That is the
 whole point of naming an algorithm in a fixture: the name has to identify a
 sequence somebody can still produce in ten years.
 
-A library default is not acceptable here, and the reason is specific rather than
+A library default is not acceptable here, and the reason is specific, not
 cautious. The standard library's `random` and a numeric library's default
 generator both produce a stream their maintainers may change between releases,
 deliberately and legitimately, and a change would move every noise fixture in the
@@ -274,15 +274,15 @@ seed alone does not identify a sequence; a named algorithm this repository
 implements does.
 
 The suite pins the first words of the stream for a known seed, so a change to the
-generator is a failing test rather than a quiet change to every noise fixture.
+generator is a failing test, and never a quiet change to every noise fixture.
 
 ### The spectral shape, and the filter
 
 `noise` carries a `spectral_shape`. Two are produced, `white` and `pink`. Pink
 is realised as a ladder of first-order sections, and it is an approximation: over
 a band from 20 Hz to a fifth of the sample rate it stays within 0.6 dB of an
-exact minus three decibels per octave, which the suite measures rather than
-claims.
+exact minus three decibels per octave, which the suite measures and does not merely
+claim.
 
 `band_limited_noise` carries `low_edge_hz`, `high_edge_hz`, `filter_type` and
 `filter_order`, and all four are required. The filter is part of the stimulus.
@@ -291,24 +291,24 @@ realisable filter of stated order are different signals with different metric
 values, so a description naming only the edges has not said what it means.
 
 The edges are the half-power points, meaning where the response is 3 dB down,
-and the design pre-warps them so they land there rather than near there.
+and the design pre-warps them so they land there and not near there.
 
 `filter_order` is the order of the family's PROTOTYPE. The low-pass to band-pass
 transformation maps each prototype pole to two, so a `filter_order` of 4 is
 realised as a band-pass with eight poles whose skirts fall at 24 dB per octave.
 A fixture author writing 4 and expecting a fourth-order response would be
 describing a different stimulus from the one produced, which is why the factor is
-stated here rather than left in the code.
+stated here and not left in the code.
 
 One family is built, `butterworth`, chosen because it is maximally flat in the
 pass band, which is what a fixture wants when the band edges are the statement
-being made. A brick wall would be a second value rather than a synonym.
+being made. A brick wall would be a second value, not a synonym.
 
 ### The level of a noise
 
 Stated the same way as for a tone, as a sound pressure level against the same
 calibration reference. The generator scales to hit it MEASURED from the samples
-it produced rather than computed from theory: a filter has pass band ripple and a
+it produced, never computed from theory: a filter has pass band ripple and a
 shaping ladder has its own, so the two differ, and the fixture's number has to be
 the one a meter would read.
 
@@ -318,7 +318,7 @@ measurement.
 
 A noise peaks well above its root mean square, so a level a tone carries
 comfortably can put a noise outside the range a sample holds. That is refused
-rather than clipped, because clipping is broadband energy every metric under test
+and never clipped, because clipping is broadband energy every metric under test
 would see.
 
 ## Versioning

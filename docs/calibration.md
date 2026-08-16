@@ -23,7 +23,7 @@ to what is written here.
 Every signal description states the sound pressure level, in decibels relative
 to twenty micropascals, that a full-scale sine wave corresponds to. It is never
 a default inside a generator, and an implementation that cannot be told its
-calibration is a limitation the adapter declares rather than something the
+calibration is a limitation the adapter declares and not something the
 harness guesses around.
 
 A full-scale sine wave here means a sinusoid whose peak sample is one, in a
@@ -122,8 +122,8 @@ and fluctuation strength anchors use. Reading it the wrong way round reports
 every implementation as disagreeing by 1.76 dB of input level, in the same
 direction, on exactly the fixtures the project's headline claims rest on.
 
-That figure is derived rather than looked up, and it was checked against the
-samples rather than trusted:
+That figure is derived and not looked up, and it was checked against the
+samples and never trusted:
 
     $ python - <<'EOF'
     import math
@@ -171,7 +171,7 @@ whole comparison is against a signal that started somewhere in particular.
 
 ## The reference anchors
 
-Two signals are definitions rather than measurements, which is what makes them
+Two signals are definitions and not measurements, which is what makes them
 safe to carry here and worth testing against.
 
 One asper is the roughness of a 1 kHz tone at 60 dB SPL, amplitude modulated at
@@ -190,7 +190,7 @@ those fixtures are built against.
 
 A sinusoid that starts at a non-zero sample is a click, and a click is broadband
 energy the metric will see, so the fade shape and duration are part of the
-stimulus and are stated by the description rather than chosen by a generator.
+stimulus and are stated by the description and never chosen by a generator.
 
 Three shapes, and `src/eichstelle/signals/generator.py` refuses any other:
 

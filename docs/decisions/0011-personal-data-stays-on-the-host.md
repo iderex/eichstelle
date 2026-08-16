@@ -21,7 +21,7 @@ jurisdictions the recording of a workplace is a matter for the works council
 before it is a matter for anybody else. A vehicle cabin recording carries its
 occupants. A recording made in a hospital corridor carries patients. Where a
 recording relates to an identifiable person, data protection law applies to it,
-and the operator is the one answerable for that rather than this project.
+and the operator is the one answerable for that, not this project.
 
 Nothing here is legal advice and this record does not attempt any. The point is
 narrower and it is entirely within this project's control: the operator has an
@@ -30,7 +30,7 @@ certain it never becomes part of the problem. A tool that quietly uploaded a
 sample for diagnostics would turn one organisation's controlled processing into a
 transfer nobody assessed.
 
-So the rules below are architectural rather than aspirational. A promise that
+So the rules below are architectural and not aspirational. A promise that
 depends on an operator configuring something correctly is a promise the operator
 has to audit, and auditing this suite's network behaviour is not their job.
 
@@ -38,9 +38,9 @@ has to audit, and auditing this suite's network behaviour is not their job.
 
 Not for telemetry. Not for update checks. Not for crash reporting. Not for
 fetching fixtures, which is why record 0005 has stimuli generated from recipes
-rather than downloaded. Not for resolving a standard reference, which is why
+and never downloaded. Not for resolving a standard reference, which is why
 record 0005 has an operator's licensed reference read from a local directory
-rather than looked up.
+and never looked up.
 
 Installing dependencies is a separate act, performed by the operator's own
 package manager, before the suite runs and outside it. That act reaches the
@@ -117,7 +117,7 @@ code name or a patient identifier. A diagnostic message quoting a filename
 carries the same. A metric value computed from a recording is derived from
 personal data, and derivation is not anonymisation.
 
-So the record is treated as potentially sensitive by default rather than treated
+So the record is treated as potentially sensitive by default and is not treated
 as a set of numbers. The default report identifies operator-supplied inputs by a
 stable identifier the operator assigns, not by path. The full path is available
 in a mode the operator turns on, because somebody debugging their own run on
@@ -134,17 +134,17 @@ Federation means publishing your results so they can be compared with other
 operators' results. It is worth having and it is the feature most likely to leak
 something, so it is built with the leak in mind from the beginning.
 
-It is off by default. It is per run rather than a stored setting, so no
+It is off by default. It is per run and not a stored setting, so no
 configuration file can be in a state where publishing happens without somebody
 deciding it that day. The operator sees exactly what would be sent, in full,
-before anything is sent, and the preview is the payload rather than a summary of
+before anything is sent, and the preview is the payload itself, never a summary of
 it. Anything derived from operator-supplied audio is excluded from the default
 payload and requires a separate, explicit confirmation of its own.
 
 The case federation is designed around is the safe one: results computed from
 generated fixture signals, which is also the case that produces the comparison
 anybody wants. Where results go and under what terms they are then available is a
-maintainer question rather than an engineering one.
+maintainer question and not an engineering one.
 
 Issue #60 carries the design and issue #57 carries the text that tells a reader
 about all of this in the place they will look first. Nothing of it is
@@ -172,7 +172,7 @@ answer for it.
 Refusing operator-supplied audio entirely, so that the suite runs only on
 generated fixtures. Rejected because running an implementation against your own
 material is a real use, and one an implementation maintainer will want. The risk
-is handled by keeping it on the host rather than by forbidding it.
+is handled by keeping it on the host and not by forbidding it.
 
 Storing the operator's mapping from identifier to path in the record, so that a
 report can show both. Rejected for the obvious reason: it puts the path in the

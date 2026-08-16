@@ -32,7 +32,7 @@ three toolboxes installed can still exercise everything above the boundary.
 It is a complete adapter that computes nothing, it depends on nothing outside
 the Python standard library, and it is the worked example this document ends at.
 `tests/e2e/test_fake_adapter.py` drives it through every behaviour it declares,
-so it is kept working by the suite rather than by anybody remembering.
+so it is kept working by the suite and never by anybody remembering.
 
 Read it beside `docs/adapter-contract.md`. Between them they answer most of what
 follows.
@@ -59,7 +59,7 @@ why.
 a successful invocation. Exit non-zero only when you could not get far enough to
 write anything.
 
-The numbers you write are decimal strings rather than JSON numbers, for the
+The numbers you write are decimal strings and not JSON numbers, for the
 reason the contract gives: a value that is going to be compared against a
 tolerance must not be rounded on the way through somebody's parser.
 
@@ -74,7 +74,7 @@ broken. It is not broken. It was asked two hundred questions it never claimed to
 answer, and every one of those became a red line with your name on it.
 
 Declaring narrowly costs you nothing. A metric you do not claim is reported as
-unsupported, which is a statement about coverage rather than about correctness,
+unsupported, which is a statement about coverage and not about correctness,
 and nobody reads it as a defect. Adding a claim later is one line in your
 declaration.
 
@@ -83,14 +83,14 @@ Three specific things to be honest about.
 The edition. If your library implements the 2017 edition of a standard, claim
 2017 and not the edition somebody asked you about last week. Two implementations
 computing what they both call roughness under different editions will disagree,
-and that disagreement is about editions rather than about either library. A
+and that disagreement is about editions and not about either library. A
 declaration that names the wrong edition turns a correct answer into a finding
 against you.
 
 The metric you nearly implement. A metric your library computes in a variant, or
 only for stationary signals, or only in free field, is a metric to claim
 carefully rather than broadly. Where the contract has no field fine enough to say
-what you mean, say it in an issue here rather than claiming the whole thing; the
+what you mean, say it in an issue here instead of claiming the whole thing; the
 missing field is a defect in the contract.
 
 The version. Report the version of the upstream implementation your adapter

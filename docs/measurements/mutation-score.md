@@ -23,7 +23,7 @@ selection is written and where the reason for each exclusion is.
 
 The score is `killed / (killed + survived + no_tests)`, and
 `tools/mutation_score.py` is where that definition lives along with the argument
-for putting uncovered mutants in the denominator rather than beside it.
+for putting uncovered mutants in the denominator and not beside it.
 
 ## What a low score does and does not mean
 
@@ -34,7 +34,7 @@ Two things inflate the survivor count on this surface in particular, and they ar
 worth knowing before anybody reads a number here as an indictment.
 
 The tool mutates string literals, so every message this project writes into a
-report or an error is a mutant, and a test that asserts a verdict rather than a
+report or an error is a mutant, and a test that asserts a verdict and not a
 sentence lets it live. Some of those are worth killing and some are a test
 asserting on prose that will change next month.
 
@@ -78,7 +78,7 @@ The renderer holds four fifths of the survivors and is the file the paragraph
 about text layout above is about. The comparator's fifty-one are the ones worth
 reading one at a time.
 
-This run was taken on Linux rather than on the machine the rest of the gate was
+This run was taken on Linux, not on the machine the rest of the gate was
 run on. mutmut refuses to start on Windows and says so, pointing at its own open
 issue for native support, so a contributor on Windows runs this measurement
 inside a Linux environment or not at all. The scheduled workflow runs it on
