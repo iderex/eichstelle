@@ -60,3 +60,9 @@ The reasoning behind each of these is in
 and does not promise.
 
 See [NOTICE.md](NOTICE.md) for the intended-use notice.
+
+## License
+
+AGPL-3.0, copyright 2026 Nils Lehnen.
+
+The full text is in [LICENSE](LICENSE).
