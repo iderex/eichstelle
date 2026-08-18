@@ -16,6 +16,10 @@ fixes and for how long, and not before.
 Use the private reporting channel on this repository, under Security, then
 Report a vulnerability. It is enabled:
 
+The form is here, without navigating:
+
+<https://github.com/iderex/eichstelle/security/advisories/new>
+
     $ gh api repos/iderex/eichstelle/private-vulnerability-reporting
     {"enabled":true}
 
